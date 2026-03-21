@@ -49,6 +49,8 @@ namespace HotelReservationsManager.Data
         {
             builder.Entity<Guest>(entity =>
             {
+                entity.HasKey(g => g.Id);
+
                 entity.Property(g => g.FirstName).IsRequired();
                 entity.Property(g => g.LastName).IsRequired();
                 entity.Property(g => g.Email).IsRequired();
@@ -68,12 +70,14 @@ namespace HotelReservationsManager.Data
             builder.Entity<Room>(entity =>
             {
                 entity.HasKey(r => r.Id);
+
                 entity.Property(r => r.Capacity).IsRequired();
                 entity.Property(r => r.Type).IsRequired();
                 entity.Property(r => r.IsFree).IsRequired();
                 entity.Property(r => r.PricePerAdult).IsRequired().HasColumnType("decimal(18,2)");
                 entity.Property(r => r.PricePerChild).IsRequired().HasColumnType("decimal(18,2)");
                 entity.HasIndex(r => r.RoomNumber).IsUnique();
+
                 entity.HasMany(r => r.Reservations)
                       .WithOne(res => res.Room)
                       .HasForeignKey(res => res.RoomId)
@@ -86,6 +90,7 @@ namespace HotelReservationsManager.Data
             builder.Entity<Reservation>(entity =>
             {
                 entity.HasKey(r => r.Id);
+
                 entity.Property(r => r.RoomId).IsRequired();
                 entity.Property(r => r.UserId).IsRequired();
                 entity.Property(r => r.CheckInDate).IsRequired();
@@ -93,13 +98,20 @@ namespace HotelReservationsManager.Data
                 entity.Property(r => r.HasBreakfast).IsRequired();
                 entity.Property(r => r.IsAllInclusive).IsRequired();
                 entity.Property(r => r.TotalPrice).IsRequired().HasColumnType("decimal(18,2)");
+
                 entity.HasOne(r => r.Room)
                       .WithMany(room => room.Reservations)
                       .HasForeignKey(r => r.RoomId)
                       .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasOne(r => r.User)
                       .WithMany(user => user.Reservations)
                       .HasForeignKey(r => r.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(r => r.ReservationGuests)
+                      .WithOne(rg => rg.Reservation)
+                      .HasForeignKey(rg => rg.ReservationId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
         }
