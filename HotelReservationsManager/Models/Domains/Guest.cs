@@ -10,6 +10,6 @@ namespace HotelReservationsManager.Models.Domains
         public string Email { get; set; } = null!;
         public bool isAdult { get; set; } = true;
 
-        public ICollection<ReservationGuest> ReservationGuests { get; set; } = []
+        public ICollection<ReservationGuest> ReservationGuests { get; set; } = [];
     }
 }

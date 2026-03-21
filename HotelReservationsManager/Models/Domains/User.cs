@@ -13,5 +13,6 @@ namespace HotelReservationsManager.Models.Domains
         public bool IsActive { get; set; } = true;
         public DateOnly? TerminationDate { get; set; } = null;
 
+        public ICollection<Reservation> Reservations { get; set; } = [];
     }
 }
