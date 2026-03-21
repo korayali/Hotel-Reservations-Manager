@@ -20,6 +20,7 @@ namespace HotelReservationsManager.Data
             base.OnModelCreating(builder);
 
             ConfigureUserEntity(builder);
+            ConfigureGuestEntity(builder);
 
         }
 
@@ -27,7 +28,6 @@ namespace HotelReservationsManager.Data
         {
             builder.Entity<User>(entity =>
             {
-                entity.HasKey(u => u.Id);
                 entity.Property(u => u.DisplayName).IsRequired();
                 entity.Property(u => u.FirstName).IsRequired();
                 entity.Property(u => u.LastName).IsRequired();
@@ -35,6 +35,7 @@ namespace HotelReservationsManager.Data
                 entity.Property(u => u.HireDate).IsRequired();
                 entity.Property(u => u.IsActive).IsRequired();
 
+                entity.HasIndex(u => u.DisplayName);
                 entity.HasIndex(u => u.EGN).IsUnique();
                 
                 entity.HasMany(u => u.Reservations)
@@ -44,7 +45,22 @@ namespace HotelReservationsManager.Data
             });
         }
 
+        private static void ConfigureGuestEntity(ModelBuilder builder)
+        {
+            builder.Entity<Guest>(entity =>
+            {
+                entity.Property(g => g.FirstName).IsRequired();
+                entity.Property(g => g.LastName).IsRequired();
+                entity.Property(g => g.Email).IsRequired();
+                entity.Property(g => g.PhoneNumber).IsRequired();
 
+                entity.HasIndex(g => g.Email).IsUnique();
+
+                entity.HasMany(g => g.ReservationGuests)
+                      .WithOne(rg => rg.Guest)
+                      .HasForeignKey(rg => rg.GuestId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }
