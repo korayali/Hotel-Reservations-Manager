@@ -19,6 +19,7 @@ namespace HotelReservationsManager.Data
         {
             base.OnModelCreating(builder);
 
+            ConfigureUserEntity(builder);
 
         }
 
@@ -30,11 +31,19 @@ namespace HotelReservationsManager.Data
                 entity.Property(u => u.DisplayName).IsRequired();
                 entity.Property(u => u.FirstName).IsRequired();
                 entity.Property(u => u.LastName).IsRequired();
-                entity.Property(u => u.EGN).IsRequired();
+                entity.Property(u => u.EGN).IsRequired().HasMaxLength(10);
                 entity.Property(u => u.HireDate).IsRequired();
                 entity.Property(u => u.IsActive).IsRequired();
-            });
 
+                entity.HasIndex(u => u.EGN).IsUnique();
+                
+                entity.HasMany(u => u.Reservations)
+                      .WithOne(r => r.User)
+                      .HasForeignKey(r => r.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
         }
+
+
     }
 }
