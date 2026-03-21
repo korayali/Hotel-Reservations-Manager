@@ -8,6 +8,8 @@
         public DateTime CheckOutDate { get; set; }
         public bool HasBreakfast { get; set; }
         public bool IsAllInclusive { get; set; }
-        public double TotalPrice { get; set; }
+        public decimal TotalPrice { get; set; }
+
+        public ICollection<ReservationGuest> ReservationGuests { get; set; } = [];
     }
 }

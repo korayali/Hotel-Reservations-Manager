@@ -9,5 +9,7 @@ namespace HotelReservationsManager.Models.Domains
         public string PhoneNumber { get; set; } = null!;
         public string Email { get; set; } = null!;
         public bool isAdult { get; set; } = true;
+
+        public ICollection<ReservationGuest> ReservationGuests { get; set; } = []
     }
 }
