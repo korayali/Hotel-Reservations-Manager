@@ -8,5 +8,7 @@
         public double PricePerAdult { get; set; }
         public double PricePerChild { get; set; }
         public int RoomNumber { get; set; }
+
+        public ICollection<Reservation> Reservations { get; set; } = [];
     }
 }
