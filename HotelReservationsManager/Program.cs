@@ -1,7 +1,12 @@
+using HotelReservationsManager.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddIdentityServices();
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 

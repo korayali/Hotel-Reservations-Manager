@@ -14,6 +14,7 @@ namespace HotelReservationsManager.Data
         public DbSet<Guest> Guests => Set<Guest>();
         public DbSet<Room> Rooms => Set<Room>();
         public DbSet<Reservation> Reservations => Set<Reservation>();
+        public DbSet<ReservationGuest> ReservationGuests => Set<ReservationGuest>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -21,7 +22,9 @@ namespace HotelReservationsManager.Data
 
             ConfigureUserEntity(builder);
             ConfigureGuestEntity(builder);
-
+            ConfigureRoomEntity(builder);
+            ConfigureReservationEntity(builder);
+            ConfigureReservationGuestEntity(builder);
         }
 
         private static void ConfigureUserEntity(ModelBuilder builder)
@@ -112,6 +115,24 @@ namespace HotelReservationsManager.Data
                 entity.HasMany(r => r.ReservationGuests)
                       .WithOne(rg => rg.Reservation)
                       .HasForeignKey(rg => rg.ReservationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private void ConfigureReservationGuestEntity(ModelBuilder builder)
+        {
+            builder.Entity<ReservationGuest>(entity =>
+            {
+                entity.HasKey(rg => new { rg.ReservationId, rg.GuestId });
+
+                entity.HasOne(rg => rg.Reservation)
+                      .WithMany(r => r.ReservationGuests)
+                      .HasForeignKey(rg => rg.ReservationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(rg => rg.Guest)
+                      .WithMany(g => g.ReservationGuests)
+                      .HasForeignKey(rg => rg.GuestId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
         }
