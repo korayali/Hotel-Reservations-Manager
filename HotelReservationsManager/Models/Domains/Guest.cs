@@ -2,7 +2,7 @@
 
 namespace HotelReservationsManager.Models.Domains
 {
-    public class Guest
+    public class Guest : BaseEntity
     {
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;

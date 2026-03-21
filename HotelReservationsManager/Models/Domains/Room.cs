@@ -1,8 +1,7 @@
 ﻿namespace HotelReservationsManager.Models.Domains
 {
-    public class Room
+    public class Room : BaseEntity
     {
-        public int Id { get; set; }
         public int Capacity { get; set; }
         public string Type { get; set; }
         public bool IsFree { get; set; } = true;
