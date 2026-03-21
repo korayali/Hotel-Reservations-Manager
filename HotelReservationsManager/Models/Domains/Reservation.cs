@@ -11,5 +11,7 @@
         public decimal TotalPrice { get; set; }
 
         public ICollection<ReservationGuest> ReservationGuests { get; set; } = [];
+        public ICollection<Room> Rooms { get; set; } = [];
+        public ICollection<User> Users { get; set; } = [];
     }
 }
