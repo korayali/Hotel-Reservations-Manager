@@ -37,7 +37,7 @@ namespace HotelReservationsManager.Data
 
                 entity.HasIndex(u => u.DisplayName);
                 entity.HasIndex(u => u.EGN).IsUnique();
-                
+
                 entity.HasMany(u => u.Reservations)
                       .WithOne(r => r.User)
                       .HasForeignKey(r => r.UserId)
@@ -59,6 +59,47 @@ namespace HotelReservationsManager.Data
                 entity.HasMany(g => g.ReservationGuests)
                       .WithOne(rg => rg.Guest)
                       .HasForeignKey(rg => rg.GuestId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private static void ConfigureRoomEntity(ModelBuilder builder)
+        {
+            builder.Entity<Room>(entity =>
+            {
+                entity.HasKey(r => r.Id);
+                entity.Property(r => r.Capacity).IsRequired();
+                entity.Property(r => r.Type).IsRequired();
+                entity.Property(r => r.IsFree).IsRequired();
+                entity.Property(r => r.PricePerAdult).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(r => r.PricePerChild).IsRequired().HasColumnType("decimal(18,2)");
+                entity.HasIndex(r => r.RoomNumber).IsUnique();
+                entity.HasMany(r => r.Reservations)
+                      .WithOne(res => res.Room)
+                      .HasForeignKey(res => res.RoomId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private void ConfigureReservationEntity(ModelBuilder builder)
+        {
+            builder.Entity<Reservation>(entity =>
+            {
+                entity.HasKey(r => r.Id);
+                entity.Property(r => r.RoomId).IsRequired();
+                entity.Property(r => r.UserId).IsRequired();
+                entity.Property(r => r.CheckInDate).IsRequired();
+                entity.Property(r => r.CheckOutDate).IsRequired();
+                entity.Property(r => r.HasBreakfast).IsRequired();
+                entity.Property(r => r.IsAllInclusive).IsRequired();
+                entity.Property(r => r.TotalPrice).IsRequired().HasColumnType("decimal(18,2)");
+                entity.HasOne(r => r.Room)
+                      .WithMany(room => room.Reservations)
+                      .HasForeignKey(r => r.RoomId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(r => r.User)
+                      .WithMany(user => user.Reservations)
+                      .HasForeignKey(r => r.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
         }
