@@ -25,8 +25,14 @@ namespace HotelReservationsManager.Extensions
                 options.Password.RequireUppercase = true;
                 options.Password.RequiredLength = 8;
             })
+            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<HotelReservationsManagerDbContext>()
             .AddDefaultTokenProviders();
+        }
+
+        public static void AddDbSeeder(this IServiceCollection services)
+        {
+            services.AddScoped<DbSeeder>();
         }
     }
 }

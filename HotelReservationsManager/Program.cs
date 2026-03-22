@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddIdentityServices();
+builder.Services.AddDbSeeder();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
@@ -33,5 +34,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+await app.SeedDatabaseAsync();
 
 app.Run();
