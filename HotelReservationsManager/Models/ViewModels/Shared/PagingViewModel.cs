@@ -7,8 +7,8 @@
         public int TotalItems { get; set; }
         public int TotalPages { get; set; }
 
-        bool HasPreviousPage => CurrentPage > 1;
-        bool HasNextPage => CurrentPage < TotalPages;
+        public bool HasPreviousPage => CurrentPage > 1;
+        public bool HasNextPage => CurrentPage < TotalPages;
 
         public int StartItem => TotalItems == 0 ? 0 : (CurrentPage - 1) * PageSize + 1;
         public int EndItem => Math.Min(CurrentPage * PageSize, TotalItems);
@@ -50,7 +50,7 @@
 
             if(end - start < maxPagesToShow - 1)
             {
-                start = Math.Max(1, end - maxPagesToShow + 1);
+                start = Math.Max(1, end - maxPagesToShow - 1);
             }
 
             return Enumerable.Range(start, end - start + 1);
