@@ -1,26 +1,20 @@
 ﻿using HotelReservationsManager.Enums;
-using HotelReservationsManager.Models.ViewModels.ReservationGuest;
 using System.ComponentModel.DataAnnotations;
 
 namespace HotelReservationsManager.Models.ViewModels.Reservation
 {
-    public class DetailsReservationViewModel
+    public class ReservationCardViewModel
     {
         public int Id { get; set; }
 
-        [Display(Name = "Room Number")]
+        [Display(Name = "Room")]
         public string RoomNumber { get; set; } = null!;
 
         [Display(Name = "Room Type")]
         public string RoomTypeDisplay { get; set; } = null!;
 
-        [Display(Name = "Capacity")]
-        public int RoomCapacity { get; set; }
-
         [Display(Name = "Booked By")]
         public string BookedByUserName { get; set; } = null!;
-
-        public string BookedByUserId { get; set; } = null!;
 
         [Display(Name = "Check-in")]
         [DisplayFormat(DataFormatString = "{0:dd MMM yyyy}")]
@@ -32,6 +26,9 @@ namespace HotelReservationsManager.Models.ViewModels.Reservation
 
         [Display(Name = "Nights")]
         public int Nights => (CheckOutDate - CheckInDate).Days;
+
+        [Display(Name = "Guests")]
+        public int GuestCount { get; set; }
 
         [Display(Name = "Breakfast")]
         public bool HasBreakfast { get; set; }
@@ -54,7 +51,5 @@ namespace HotelReservationsManager.Models.ViewModels.Reservation
             ReservationStatus.Cancelled => "badge bg-danger",
             _ => "badge bg-light"
         };
-
-        public IEnumerable<ReservationGuestCardViewModel> Guests { get; set; } = [];
     }
 }
