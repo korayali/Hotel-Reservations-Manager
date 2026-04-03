@@ -1,6 +1,8 @@
 ﻿using Forked.Services;
 using HotelReservationsManager.Data;
 using HotelReservationsManager.Models.Domains;
+using HotelReservationsManager.Services.Interfaces;
+using HotelReservationsManager.Services.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -45,6 +47,12 @@ namespace HotelReservationsManager.Extensions
         public static void AddEmailServices(this IServiceCollection services)
         {
             services.AddTransient<IEmailSender, EmailSender>();
+        }
+
+        public static void AddUserService(this IServiceCollection services)
+        {
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<SignInManager<User>, HotelReservationsManagerSignInManager>();
         }
     }
 }

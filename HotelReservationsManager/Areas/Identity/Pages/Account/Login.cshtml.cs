@@ -118,6 +118,11 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account
                     _logger.LogInformation("User logged in.");
                     return LocalRedirect(returnUrl);
                 }
+                if(result.IsNotAllowed)
+                {
+                    ModelState.AddModelError(string.Empty, "Your account has been deactivated. Please contact an administrator.");
+                    return Page();
+                }
                 if (result.RequiresTwoFactor)
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });

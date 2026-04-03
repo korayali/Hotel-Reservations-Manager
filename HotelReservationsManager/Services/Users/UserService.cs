@@ -1,138 +1,134 @@
 ﻿using HotelReservationsManager.Data;
 using HotelReservationsManager.Enums;
+using HotelReservationsManager.Extensions.Mapping;
 using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.User;
+using HotelReservationsManager.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using HotelReservationsManager.Extensions.Mapping;
 using System.Runtime.InteropServices;
 
 namespace HotelReservationsManager.Services.Users
 {
     public class UserService : IUserService
     {
-        private readonly HotelReservationsManagerDbContext _context;
         private readonly UserManager<User> _userManager;
 
-        public UserService(HotelReservationsManagerDbContext context, UserManager<User> userManager)
+        public UserService(UserManager<User> userManager)
         {
-            _context = context;
             _userManager = userManager;
         }
 
-        public async Task<UserListViewModel> GetPagedUsersAsync(UserFilterViewModel filters, int page, int pageSize)
+        public async Task<UserListViewModel> GetUsersAsync(UserFilterViewModel filters, int page, int pageSize)
         {
-            var query = _context.Users.AsQueryable();
+            var query = _userManager.Users
+                .Include(u => u.Reservations)
+                .AsQueryable();
 
-            // Text filters
             if (!string.IsNullOrWhiteSpace(filters.FirstName))
                 query = query.Where(u => u.FirstName.Contains(filters.FirstName));
-
             if (!string.IsNullOrWhiteSpace(filters.LastName))
                 query = query.Where(u => u.LastName.Contains(filters.LastName));
-
             if (!string.IsNullOrWhiteSpace(filters.Email))
-                query = query.Where(u => u.Email != null && u.Email.Contains(filters.Email));
+                query = query.Where(u => u.Email!.Contains(filters.Email));
+            if (filters.StatusFilter == UserStatusFilter.Active)
+                query = query.Where(u => u.IsActive);
+            else if (filters.StatusFilter == UserStatusFilter.Inactive)
+                query = query.Where(u => !u.IsActive);
 
-            // Status filter
-            query = filters.StatusFilter switch
+            var users = await query.ToListAsync();
+
+            var cards = new List<UserCardViewModel>();
+            foreach (var user in users)
             {
-                UserStatusFilter.Active => query.Where(u => u.IsActive),
-                UserStatusFilter.Inactive => query.Where(u => !u.IsActive),
-                _ => query
-            };
+                var card = await user.ToCardViewModelAsync(_userManager);
 
-            // Role filter
-            if (filters.RoleFilter != UserRoleFilter.All)
-            {
-                var targetRoleName = filters.RoleFilter switch
-                {
-                    UserRoleFilter.AdminsOnly => UserRole.Admin.ToString(),
-                    UserRoleFilter.EmployeesOnly => UserRole.Employee.ToString(),
-                    _ => null
-                };
+                if (filters.RoleFilter == UserRoleFilter.AdminsOnly && card.Role != UserRole.Admin) continue;
+                if (filters.RoleFilter == UserRoleFilter.EmployeesOnly && card.Role != UserRole.Employee) continue;
 
-                if (targetRoleName is not null)
-                {
-                    var roleId = await _context.Roles
-                        .Where(r => r.Name == targetRoleName)
-                        .Select(r => r.Id)
-                        .FirstOrDefaultAsync();
-
-                    if (roleId is not null)
-                        query = query.Where(u => _context.UserRoles
-                            .Any(ur => ur.UserId == u.Id && ur.RoleId == roleId));
-                }
+                cards.Add(card);
             }
 
-            var totalItems = await query.CountAsync();
-
-            var users = await query
-                .OrderBy(u => u.LastName)
-                .ThenBy(u => u.FirstName)
+            var paged = cards
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(u => new
-                {
-                    u.Id,
-                    u.DisplayName,
-                    u.FirstName,
-                    u.MiddleName,
-                    u.LastName,
-                    u.Email,
-                    u.PhoneNumber,
-                    u.HireDate,
-                    u.IsActive,
-                    ReservationCount = u.Reservations.Count
-                })
-                .ToListAsync();
+                .ToList();
 
-            // Resolve Identity roles for each user in one query
-            var userIds = users.Select(u => u.Id).ToList();
-            var roleMap = await BuildRoleMapAsync(userIds);
-
-            var cards = users.Select(u => new UserCardViewModel
-            {
-                Id = u.Id,
-                DisplayName = u.DisplayName,
-                FirstName = u.FirstName,
-                MiddleName = u.MiddleName,
-                LastName = u.LastName,
-                Email = u.Email ?? string.Empty,
-                PhoneNumber = u.PhoneNumber,
-                HireDate = u.HireDate,
-                IsActive = u.IsActive,
-                Role = roleMap.TryGetValue(u.Id, out var role) ? role : UserRole.Employee,
-                ReservationCount = u.ReservationCount
-            }).ToList();
-
-            return new UserListViewModel(cards, page, pageSize, totalItems)
+            return new UserListViewModel(paged, page, pageSize, cards.Count)
             {
                 Filters = filters
             };
         }
 
-        /// <summary>Builds a userId → UserRole map for a batch of users in two queries.</summary>
-        private async Task<Dictionary<string, UserRole>> BuildRoleMapAsync(List<string> userIds)
+        public async Task<DetailsUserViewModel?> GetUserDetailsAsync(string id)
         {
-            var adminRoleId = await _context.Roles
-                .Where(r => r.Name == UserRole.Admin.ToString())
-                .Select(r => r.Id)
-                .FirstOrDefaultAsync();
- 
-            HashSet<string> adminIds = [];
- 
-            if (adminRoleId is not null)
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            return user == null ? null : await user.ToDetailsViewModelAsync(_userManager);
+        }
+
+        public async Task UpdateUserAsync(DetailsUserViewModel vm, string currentUserId)
+        {
+            var user = await _userManager.FindByIdAsync(vm.Id)
+                ?? throw new InvalidOperationException($"User '{vm.Id}' not found.");
+
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            var wasAdmin = currentRoles.Contains("Admin");
+            var willBeAdmin = vm.Role == UserRole.Admin;
+
+            if (wasAdmin && !willBeAdmin)
             {
-                adminIds = (await _context.UserRoles
-                    .Where(ur => userIds.Contains(ur.UserId) && ur.RoleId == adminRoleId)
-                    .Select(ur => ur.UserId)
-                    .ToListAsync()).ToHashSet();
+                if (vm.Id == currentUserId)
+                    throw new InvalidOperationException("You cannot remove your own admin role.");
+
+                var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+                if (adminUsers.Count == 1)
+                    throw new InvalidOperationException("Cannot remove the last administrator.");
+
+                var originalAdmin = adminUsers.OrderBy(u => u.HireDate).First();
+                if (originalAdmin.Id == vm.Id)
+                    throw new InvalidOperationException("Cannot remove the original administrator.");
             }
- 
-            return userIds.ToDictionary(
-                id => id,
-                id => adminIds.Contains(id) ? UserRole.Admin : UserRole.Employee);
+
+            user.ApplyFromViewModel(vm);
+            await _userManager.UpdateAsync(user);
+
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            await _userManager.AddToRoleAsync(user, vm.Role.ToString());
+        }
+
+        public async Task ToggleAdminAsync(string id, string currentUserId)
+        {
+            var user = await _userManager.FindByIdAsync(id)
+                ?? throw new InvalidOperationException($"User '{id}' not found.");
+
+            if (id == currentUserId)
+                throw new InvalidOperationException("You cannot remove your own admin role.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Admin"))
+            {
+                var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+                if (adminUsers.Count == 1)
+                    throw new InvalidOperationException("Cannot remove the last administrator.");
+
+                // Original admin is the earliest hired admin
+                var originalAdmin = adminUsers
+                    .OrderBy(u => u.HireDate)
+                    .First();
+
+                if (originalAdmin.Id == id)
+                    throw new InvalidOperationException("Cannot remove the original administrator.");
+
+                await _userManager.RemoveFromRoleAsync(user, "Admin");
+                await _userManager.AddToRoleAsync(user, "Employee");
+            }
+            else
+            {
+                await _userManager.RemoveFromRoleAsync(user, "Employee");
+                await _userManager.AddToRoleAsync(user, "Admin");
+            }
         }
     }
 }
