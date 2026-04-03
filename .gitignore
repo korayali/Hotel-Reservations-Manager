@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 Hotel-Reservations-Manager/appsettings.Development.json
+/HotelReservationsManager/appsettings.Development.json

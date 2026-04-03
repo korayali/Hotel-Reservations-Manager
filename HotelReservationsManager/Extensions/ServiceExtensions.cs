@@ -1,6 +1,8 @@
-﻿using HotelReservationsManager.Data;
+﻿using Forked.Services;
+using HotelReservationsManager.Data;
 using HotelReservationsManager.Models.Domains;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +19,7 @@ namespace HotelReservationsManager.Extensions
 
         public static void AddIdentityServices(this IServiceCollection services)
         {
-            services.AddIdentityCore<User>(options =>
+            services.AddIdentity<User, IdentityRole>(options =>
             {
                 options.Password.RequireDigit = true;
                 options.Password.RequireLowercase = true;
@@ -25,14 +27,24 @@ namespace HotelReservationsManager.Extensions
                 options.Password.RequireUppercase = true;
                 options.Password.RequiredLength = 8;
             })
-            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<HotelReservationsManagerDbContext>()
             .AddDefaultTokenProviders();
+
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Account/Login";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+            });
         }
 
         public static void AddDbSeeder(this IServiceCollection services)
         {
             services.AddScoped<DbSeeder>();
+        }
+
+        public static void AddEmailServices(this IServiceCollection services)
+        {
+            services.AddTransient<IEmailSender, EmailSender>();
         }
     }
 }

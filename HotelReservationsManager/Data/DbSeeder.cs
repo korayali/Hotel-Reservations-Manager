@@ -23,6 +23,11 @@ namespace HotelReservationsManager.Data
                 await roleManager.CreateAsync(new IdentityRole("Admin"));
             }
 
+            if (!await roleManager.RoleExistsAsync("Employee"))
+            {
+                await roleManager.CreateAsync(new IdentityRole("Employee"));
+            }
+
             var adminEmail = "admin@example.com";
 
             var existingUser = await userManager.FindByEmailAsync(adminEmail);
@@ -31,8 +36,16 @@ namespace HotelReservationsManager.Data
             {
                 var adminUser = new User
                 {
-                    UserName = "admin",
-                    Email = adminEmail
+                    DisplayName = "Admin",
+                    FirstName = "Admin",
+                    MiddleName = "Adminov",
+                    LastName = "Adminov",
+                    EGN = "0000000000",
+                    HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    IsActive = true,
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(adminUser, "Admin123!");

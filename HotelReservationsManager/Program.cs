@@ -1,4 +1,8 @@
 using HotelReservationsManager.Extensions;
+using HotelReservationsManager.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using HotelReservationsManager.Models.Domains;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +12,7 @@ builder.Services.AddIdentityServices();
 builder.Services.AddDbSeeder();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddEmailServices();
 
 var app = builder.Build();
 
