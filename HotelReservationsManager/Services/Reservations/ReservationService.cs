@@ -107,10 +107,11 @@ namespace HotelReservationsManager.Services.Reservations
                 TotalPrice = reservation.TotalPrice,
                 Guests = reservation.ReservationGuests.Select(rg => new ReservationGuestCardViewModel
                 {
-                    Id = rg.GuestId,
-                    FirstName = rg.Guest.FirstName,
-                    LastName = rg.Guest.LastName,
-                    Email = rg.Guest.Email
+                    GuestId = rg.GuestId,
+                    FullName = $"{rg.Guest.FirstName} {rg.Guest.LastName}",
+                    Email = rg.Guest.Email,
+                    PhoneNumber = rg.Guest.PhoneNumber,
+                    IsAdult = rg.Guest.isAdult
                 })
             };
         }
