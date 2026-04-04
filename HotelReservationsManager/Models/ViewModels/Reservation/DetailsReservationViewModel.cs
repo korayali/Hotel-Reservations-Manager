@@ -31,7 +31,9 @@ namespace HotelReservationsManager.Models.ViewModels.Reservation
         public DateTime CheckOutDate { get; set; }
 
         [Display(Name = "Nights")]
-        public int Nights => (CheckOutDate - CheckInDate).Days;
+        public int Nights => CheckOutDate > CheckInDate
+            ? (CheckOutDate - CheckInDate).Days
+            : 0;
 
         [Display(Name = "Breakfast")]
         public bool HasBreakfast { get; set; }

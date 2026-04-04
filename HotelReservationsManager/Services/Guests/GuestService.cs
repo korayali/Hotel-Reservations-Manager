@@ -79,6 +79,10 @@ namespace HotelReservationsManager.Services.Guests
             var reservationsQuery = _context.ReservationGuests
                 .AsNoTracking()
                 .Where(rg => rg.GuestId == id)
+                .Include(rg => rg.Reservation)
+                .ThenInclude(r => r.Room)             // Required for RoomNumber and RoomType
+                .Include(rg => rg.Reservation)
+                .ThenInclude(r => r.User)             // Required for BookedByUserName
                 .Include(rg => rg.Reservation);
 
             int totalReservations = await reservationsQuery.CountAsync();
