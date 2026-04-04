@@ -13,6 +13,7 @@ builder.Services.AddUserService();
 builder.Services.AddGuestService();
 builder.Services.AddRoomService();
 builder.Services.AddReservationService();
+builder.Services.AddRoomAvailabilityUpdateService();
 
 var app = builder.Build();
 

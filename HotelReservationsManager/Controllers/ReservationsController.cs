@@ -58,21 +58,16 @@ namespace HotelReservationsManager.Controllers
         public async Task<IActionResult> Create(CreateReservationViewModel model)
         {
             if (!ModelState.IsValid)
-            {
-                var rebuiltModel = await _reservationService.BuildCreateFormAsync();
-
-                model.AvailableRooms = rebuiltModel.AvailableRooms;
-                model.AvailableGuests = rebuiltModel.AvailableGuests;
-
                 return View(model);
-            }
 
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
             if (string.IsNullOrEmpty(currentUserId))
-            {
                 return Unauthorized();
-            }
+
+            // Soft capacity check — store warning in TempData so it shows after redirect
+            var capacityWarning = await _reservationService.CheckCapacityAsync(model.RoomId, model.GuestIds.Count);
+            if (capacityWarning is not null)
+                TempData["Warning"] = capacityWarning;
 
             await _reservationService.CreateAsync(model, currentUserId);
 
@@ -93,16 +88,27 @@ namespace HotelReservationsManager.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, EditReservationViewModel model)
         {
-            if (id != model.Id) return BadRequest();
+            if (id != model.Id)
+                return BadRequest();
 
             if (!ModelState.IsValid)
-            {
-                await _reservationService.BuildEditFormAsync(id);
                 return View(model);
-            }
 
-            var updated = await _reservationService.UpdateAsync(model);
-            if (!updated) return NotFound();
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(currentUserId))
+                return Unauthorized();
+
+            var capacityWarning = await _reservationService.CheckCapacityAsync(
+                model.RoomId,
+                model.GuestIds.Count);
+
+            if (capacityWarning is not null)
+                TempData["Warning"] = capacityWarning;
+
+            var updated = await _reservationService.UpdateAsync(model, currentUserId);
+
+            if (!updated)
+                return NotFound();
 
             TempData["Success"] = "Reservation updated successfully.";
             return RedirectToAction(nameof(Details), new { id });
@@ -128,21 +134,31 @@ namespace HotelReservationsManager.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // GET: /Reservations/GetAvailableRooms?checkIn=...&checkOut=...
         [HttpGet]
         public async Task<IActionResult> GetAvailableRooms(DateTime checkIn, DateTime checkOut)
         {
+            if (checkIn == default || checkOut == default || checkOut <= checkIn)
+                return BadRequest("Invalid date range.");
+
             var rooms = await _reservationService.GetAvailableRoomsAsync(checkIn, checkOut);
 
+            // Include capacity so the client can warn when guests exceed room capacity
             return Json(rooms.Select(r => new
             {
                 id = r.Id,
-                text = $"Room {r.RoomNumber} — {r.Type}"
+                text = $"Room {r.RoomNumber} — {r.Type} (cap. {r.Capacity})",
+                capacity = r.Capacity
             }));
         }
 
+        // GET: /Reservations/GetAvailableGuests?checkIn=...&checkOut=...
         [HttpGet]
         public async Task<IActionResult> GetAvailableGuests(DateTime checkIn, DateTime checkOut)
         {
+            if (checkIn == default || checkOut == default || checkOut <= checkIn)
+                return BadRequest("Invalid date range.");
+
             var guests = await _reservationService.GetAvailableGuestsAsync(checkIn, checkOut);
 
             return Json(guests.Select(g => new

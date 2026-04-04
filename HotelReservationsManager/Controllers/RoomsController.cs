@@ -46,18 +46,29 @@ namespace HotelReservationsManager.Controllers
 
         // GET: /Rooms/Create
         [Authorize(Roles = "Admin")]
-        public IActionResult Create() => View(new CreateRoomViewModel());
+        public async Task<IActionResult> Create()
+        {
+            var model = await _roomService.BuildCreateFormAsync();
+            return View(model);
+        }
 
         // POST: /Rooms/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(CreateRoomViewModel model)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid)
+                return View(model);
 
-            await _roomService.CreateAsync(model);
-            TempData["Success"] = $"Room {model.RoomNumber} created successfully.";
+            var result = await _roomService.CreateAsync(model);
+
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError(nameof(model.RoomNumber), result.Error!);
+                return View(model);
+            }
+
+            TempData["Success"] = "Room created successfully.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -77,12 +88,23 @@ namespace HotelReservationsManager.Controllers
         public async Task<IActionResult> Edit(int id, EditRoomViewModel model)
         {
             if (id != model.Id) return BadRequest();
-            if (!ModelState.IsValid) return View(model);
 
-            var updated = await _roomService.UpdateAsync(model);
-            if (!updated) return NotFound();
+            if (!ModelState.IsValid)
+                return View(model);
 
-            TempData["Success"] = $"Room {model.RoomNumber} updated successfully.";
+            var result = await _roomService.UpdateAsync(model);
+
+            if (!result.Succeeded)
+            {
+                // "Room not found" is a 404; uniqueness errors go back to the form
+                if (result.Error == "Room not found.")
+                    return NotFound();
+
+                ModelState.AddModelError(nameof(model.RoomNumber), result.Error!);
+                return View(model);
+            }
+
+            TempData["Success"] = "Room updated successfully.";
             return RedirectToAction(nameof(Details), new { id });
         }
 

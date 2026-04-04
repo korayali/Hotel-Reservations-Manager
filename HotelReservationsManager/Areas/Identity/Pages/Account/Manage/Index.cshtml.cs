@@ -1,15 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
+﻿#nullable disable
 
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using HotelReservationsManager.Data;
 using HotelReservationsManager.Models.Domains;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
 {
@@ -17,39 +15,26 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
+        private readonly HotelReservationsManagerDbContext _context;
 
         public IndexModel(
             UserManager<User> userManager,
-            SignInManager<User> signInManager)
+            SignInManager<User> signInManager,
+            HotelReservationsManagerDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public string Username { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [TempData]
         public string StatusMessage { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
             [Phone]
@@ -84,7 +69,6 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
 
             Username = userName;
-
             Input = new InputModel
             {
                 PhoneNumber = phoneNumber,
@@ -92,17 +76,15 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
                 MiddleName = user.MiddleName,
                 LastName = user.LastName,
                 DisplayName = user.DisplayName,
-                EGN = user.EGN,
+                EGN = user.EGN
             };
         }
 
         public async Task<IActionResult> OnGetAsync()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
+            if (user is null)
                 return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
 
             await LoadAsync(user);
             return Page();
@@ -111,7 +93,7 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
         public async Task<IActionResult> OnPostAsync()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            if (user is null)
                 return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
 
             if (!ModelState.IsValid)
@@ -120,6 +102,21 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
                 return Page();
             }
 
+            // ✅ EGN uniqueness check
+            if (user.EGN != Input.EGN)
+            {
+                var egnTaken = await _context.Users
+                    .AnyAsync(u => u.EGN == Input.EGN && u.Id != user.Id);
+
+                if (egnTaken)
+                {
+                    ModelState.AddModelError(nameof(Input.EGN), "An account with this EGN already exists.");
+                    await LoadAsync(user);
+                    return Page();
+                }
+            }
+
+            // Phone number update via Identity
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
             if (Input.PhoneNumber != phoneNumber)
             {
@@ -131,15 +128,25 @@ namespace HotelReservationsManager.Areas.Identity.Pages.Account.Manage
                 }
             }
 
+            // Update other profile fields
             user.FirstName = Input.FirstName;
             user.MiddleName = Input.MiddleName;
             user.LastName = Input.LastName;
             user.DisplayName = Input.DisplayName;
             user.EGN = Input.EGN;
 
-            await _userManager.UpdateAsync(user);
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                foreach (var error in updateResult.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+
+                await LoadAsync(user);
+                return Page();
+            }
+
             await _signInManager.RefreshSignInAsync(user);
-            StatusMessage = "Your profile has been updated";
+            StatusMessage = "Your profile has been updated successfully.";
             return RedirectToPage();
         }
     }

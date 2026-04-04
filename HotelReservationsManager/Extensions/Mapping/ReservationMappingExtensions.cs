@@ -71,7 +71,6 @@ namespace HotelReservationsManager.Extensions.Mapping
             {
                 Id             = reservation.Id,
                 RoomId         = reservation.RoomId,
-                UserId         = reservation.UserId,
                 CheckInDate    = reservation.CheckInDate,
                 CheckOutDate   = reservation.CheckOutDate,
                 HasBreakfast   = reservation.HasBreakfast,
@@ -86,7 +85,6 @@ namespace HotelReservationsManager.Extensions.Mapping
             new Reservation
             {
                 RoomId         = vm.RoomId,
-                UserId         = vm.UserId,
                 CheckInDate    = vm.CheckInDate,
                 CheckOutDate   = vm.CheckOutDate,
                 HasBreakfast   = vm.HasBreakfast,
@@ -97,7 +95,6 @@ namespace HotelReservationsManager.Extensions.Mapping
         public static void ApplyFromViewModel(this Reservation reservation, EditReservationViewModel vm)
         {
             reservation.RoomId         = vm.RoomId;
-            reservation.UserId         = vm.UserId;
             reservation.CheckInDate    = vm.CheckInDate;
             reservation.CheckOutDate   = vm.CheckOutDate;
             reservation.HasBreakfast   = vm.HasBreakfast;

@@ -1,4 +1,5 @@
-﻿using HotelReservationsManager.Models.Domains;
+﻿using HotelReservationsManager.Models;
+using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.User;
 using HotelReservationsManager.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -32,23 +33,36 @@ namespace HotelReservationsManager.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Details(DetailsUserViewModel vm)
         {
-            if (!ModelState.IsValid) return View(vm);
+            if (!ModelState.IsValid)
+                return View(vm);
 
+            var currentUserId = _userManager.GetUserId(User)!;
+
+            ServiceResult result;
             try
             {
-                var currentUserId = _userManager.GetUserId(User)!;
-                await _userService.UpdateUserAsync(vm, currentUserId);
-                TempData["StatusMessage"] = "User updated successfully.";
+                result = await _userService.UpdateUserAsync(vm, currentUserId);
             }
             catch (InvalidOperationException ex)
             {
-                TempData["ErrorMessage"] = ex.Message;
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Details), new { id = vm.Id });
             }
 
+            if (!result.Succeeded)
+            {
+                // EGN or other uniqueness/validation errors go back to form
+                ModelState.AddModelError(string.Empty, result.Error!);
+                return View(vm);
+            }
+
+            TempData["Success"] = "User updated successfully.";
             return RedirectToAction(nameof(Details), new { id = vm.Id });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> ToggleAdmin(string id)

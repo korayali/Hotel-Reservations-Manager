@@ -48,9 +48,19 @@
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> Create(CreateGuestViewModel model)
             {
-                if (!ModelState.IsValid) return View(model);
+                if (!ModelState.IsValid)
+                    return View(model);
 
-                await _guestService.CreateAsync(model);
+                var result = await _guestService.CreateAsync(model);
+
+                if (!result.Succeeded)
+                {
+                    // Route the error to the specific field that caused it
+                    var field = result.Error!.Contains("email") ? nameof(model.Email) : nameof(model.PhoneNumber);
+                    ModelState.AddModelError(field, result.Error!);
+                    return View(model);
+                }
+
                 TempData["Success"] = "Guest created successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -69,10 +79,21 @@
             public async Task<IActionResult> Edit(int id, EditGuestViewModel model)
             {
                 if (id != model.Id) return BadRequest();
-                if (!ModelState.IsValid) return View(model);
 
-                var updated = await _guestService.UpdateAsync(model);
-                if (!updated) return NotFound();
+                if (!ModelState.IsValid)
+                    return View(model);
+
+                var result = await _guestService.UpdateAsync(model);
+
+                if (!result.Succeeded)
+                {
+                    if (result.Error == "Guest not found.")
+                        return NotFound();
+
+                    var field = result.Error!.Contains("email") ? nameof(model.Email) : nameof(model.PhoneNumber);
+                    ModelState.AddModelError(field, result.Error!);
+                    return View(model);
+                }
 
                 TempData["Success"] = "Guest updated successfully.";
                 return RedirectToAction(nameof(Details), new { id });

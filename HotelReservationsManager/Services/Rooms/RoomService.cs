@@ -1,5 +1,6 @@
 ﻿using HotelReservationsManager.Data;
 using HotelReservationsManager.Extensions.Mapping;
+using HotelReservationsManager.Models;
 using HotelReservationsManager.Models.ViewModels.Room;
 using HotelReservationsManager.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -76,26 +77,64 @@ namespace HotelReservationsManager.Services
             if (room is null) return null;
 
             var activeReservationCount = await _context.Reservations
-                .CountAsync(res => res.RoomId == id &&
-                                   res.CheckOutDate >= DateTime.Today);
+                .CountAsync(res => res.RoomId == id && res.CheckOutDate >= DateTime.Today);
 
             return room.ToDeleteViewModel(activeReservationCount);
         }
 
-        public async Task CreateAsync(CreateRoomViewModel model)
+        /// <summary>
+        /// Builds a pre-populated CreateRoomViewModel where RoomNumber defaults
+        /// to one above the current highest room number (or 1 if no rooms exist yet).
+        /// </summary>
+        public async Task<CreateRoomViewModel> BuildCreateFormAsync()
         {
-            _context.Rooms.Add(model.ToDomain());
-            await _context.SaveChangesAsync();
+            var nextRoomNumber = await _context.Rooms.AnyAsync()
+                ? await _context.Rooms.MaxAsync(r => r.RoomNumber) + 1
+                : 1;
+
+            return new CreateRoomViewModel
+            {
+                RoomNumber = nextRoomNumber
+            };
         }
 
-        public async Task<bool> UpdateAsync(EditRoomViewModel model)
+        /// <summary>
+        /// Creates a new room. Returns a failure result if the room number is already taken.
+        /// </summary>
+        public async Task<ServiceResult> CreateAsync(CreateRoomViewModel model)
+        {
+            var duplicate = await _context.Rooms
+                .AnyAsync(r => r.RoomNumber == model.RoomNumber);
+
+            if (duplicate)
+                return ServiceResult.Fail($"Room number {model.RoomNumber} is already in use.");
+
+            _context.Rooms.Add(model.ToDomain());
+            await _context.SaveChangesAsync();
+            return ServiceResult.Ok();
+        }
+
+        /// <summary>
+        /// Updates a room. Returns a failure result if the new room number conflicts
+        /// with a different existing room.
+        /// </summary>
+        public async Task<ServiceResult> UpdateAsync(EditRoomViewModel model)
         {
             var room = await _context.Rooms.FindAsync(model.Id);
-            if (room is null) return false;
+            if (room is null) return ServiceResult.Fail("Room not found.");
+
+            if (room.RoomNumber != model.RoomNumber)
+            {
+                var duplicate = await _context.Rooms
+                    .AnyAsync(r => r.RoomNumber == model.RoomNumber && r.Id != model.Id);
+
+                if (duplicate)
+                    return ServiceResult.Fail($"Room number {model.RoomNumber} is already in use.");
+            }
 
             room.ApplyFromViewModel(model);
             await _context.SaveChangesAsync();
-            return true;
+            return ServiceResult.Ok();
         }
 
         public async Task<bool> DeleteAsync(int id)

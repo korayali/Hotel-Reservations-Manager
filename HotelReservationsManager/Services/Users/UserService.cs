@@ -1,6 +1,7 @@
 ﻿using HotelReservationsManager.Data;
 using HotelReservationsManager.Enums;
 using HotelReservationsManager.Extensions.Mapping;
+using HotelReservationsManager.Models;
 using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.User;
 using HotelReservationsManager.Services.Interfaces;
@@ -68,10 +69,22 @@ namespace HotelReservationsManager.Services.Users
             return user == null ? null : await user.ToDetailsViewModelAsync(_userManager);
         }
 
-        public async Task UpdateUserAsync(DetailsUserViewModel vm, string currentUserId)
+        public async Task<ServiceResult> UpdateUserAsync(DetailsUserViewModel vm, string currentUserId)
         {
-            var user = await _userManager.FindByIdAsync(vm.Id)
-                ?? throw new InvalidOperationException($"User '{vm.Id}' not found.");
+            var user = await _userManager.FindByIdAsync(vm.Id);
+
+            if (user is null)
+                return ServiceResult.Fail($"User '{vm.Id}' not found.");
+
+            // Check EGN uniqueness only if changed
+            if (user.EGN != vm.EGN)
+            {
+                var duplicate = await _userManager.Users
+                    .AnyAsync(u => u.EGN == vm.EGN && u.Id != vm.Id);
+
+                if (duplicate)
+                    return ServiceResult.Fail($"EGN {vm.EGN} is already in use.");
+            }
 
             var currentRoles = await _userManager.GetRolesAsync(user);
             var wasAdmin = currentRoles.Contains("Admin");
@@ -80,22 +93,31 @@ namespace HotelReservationsManager.Services.Users
             if (wasAdmin && !willBeAdmin)
             {
                 if (vm.Id == currentUserId)
-                    throw new InvalidOperationException("You cannot remove your own admin role.");
+                    return ServiceResult.Fail("You cannot remove your own admin role.");
 
                 var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+
                 if (adminUsers.Count == 1)
-                    throw new InvalidOperationException("Cannot remove the last administrator.");
+                    return ServiceResult.Fail("Cannot remove the last administrator.");
 
                 var originalAdmin = adminUsers.OrderBy(u => u.HireDate).First();
+
                 if (originalAdmin.Id == vm.Id)
-                    throw new InvalidOperationException("Cannot remove the original administrator.");
+                    return ServiceResult.Fail("Cannot remove the original administrator.");
             }
 
             user.ApplyFromViewModel(vm);
-            await _userManager.UpdateAsync(user);
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                return ServiceResult.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)));
 
             await _userManager.RemoveFromRolesAsync(user, currentRoles);
             await _userManager.AddToRoleAsync(user, vm.Role.ToString());
+
+            return ServiceResult.Ok();
         }
 
         public async Task ToggleAdminAsync(string id, string currentUserId)
@@ -114,9 +136,7 @@ namespace HotelReservationsManager.Services.Users
                     throw new InvalidOperationException("Cannot remove the last administrator.");
 
                 // Original admin is the earliest hired admin
-                var originalAdmin = adminUsers
-                    .OrderBy(u => u.HireDate)
-                    .First();
+                var originalAdmin = adminUsers.Where(x => x.DisplayName == "Admin").FirstOrDefault();
 
                 if (originalAdmin.Id == id)
                     throw new InvalidOperationException("Cannot remove the original administrator.");

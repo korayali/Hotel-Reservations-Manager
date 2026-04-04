@@ -1,4 +1,5 @@
-﻿using HotelReservationsManager.Models.ViewModels.Room;
+﻿using HotelReservationsManager.Models;
+using HotelReservationsManager.Models.ViewModels.Room;
 
 namespace HotelReservationsManager.Services.Interfaces
 {
@@ -8,9 +9,10 @@ namespace HotelReservationsManager.Services.Interfaces
         Task<DetailsRoomViewModel?> GetDetailsByIdAsync(int id);
         Task<EditRoomViewModel?> GetForEditAsync(int id);
         Task<DeleteRoomViewModel?> GetForDeleteAsync(int id);
-        Task CreateAsync(CreateRoomViewModel model);
-        Task<bool> UpdateAsync(EditRoomViewModel model);
+        Task<ServiceResult> CreateAsync(CreateRoomViewModel model);
+        Task<ServiceResult> UpdateAsync(EditRoomViewModel model);
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
+        Task<CreateRoomViewModel> BuildCreateFormAsync();
     }
 }

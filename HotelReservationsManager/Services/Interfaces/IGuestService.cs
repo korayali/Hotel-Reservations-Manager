@@ -1,4 +1,5 @@
-﻿using HotelReservationsManager.Models.ViewModels.Guest;
+﻿using HotelReservationsManager.Models;
+using HotelReservationsManager.Models.ViewModels.Guest;
 
 namespace HotelReservationsManager.Services.Interfaces
 {
@@ -8,8 +9,8 @@ namespace HotelReservationsManager.Services.Interfaces
         Task<DetailsGuestViewModel?> GetDetailsByIdAsync(int id, int reservationsPage, int reservationsPageSize);
         Task<EditGuestViewModel?> GetForEditAsync(int id);
         Task<DeleteGuestViewModel?> GetForDeleteAsync(int id);
-        Task CreateAsync(CreateGuestViewModel model);
-        Task<bool> UpdateAsync(EditGuestViewModel model);
+        Task<ServiceResult> CreateAsync(CreateGuestViewModel model);
+        Task<ServiceResult> UpdateAsync(EditGuestViewModel model);
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
     }

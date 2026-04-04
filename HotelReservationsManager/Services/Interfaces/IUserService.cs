@@ -1,4 +1,5 @@
-﻿using HotelReservationsManager.Models.ViewModels.User;
+﻿using HotelReservationsManager.Models;
+using HotelReservationsManager.Models.ViewModels.User;
 
 namespace HotelReservationsManager.Services.Interfaces
 {
@@ -6,7 +7,7 @@ namespace HotelReservationsManager.Services.Interfaces
     {
         Task<UserListViewModel> GetUsersAsync(UserFilterViewModel filters, int page, int pageSize);
         Task<DetailsUserViewModel?> GetUserDetailsAsync(string id);
-        Task UpdateUserAsync(DetailsUserViewModel vm, string currentUserId);
+        Task<ServiceResult> UpdateUserAsync(DetailsUserViewModel vm, string currentUserId);
         Task ToggleAdminAsync(string id, string currentUserId);
     }
 }

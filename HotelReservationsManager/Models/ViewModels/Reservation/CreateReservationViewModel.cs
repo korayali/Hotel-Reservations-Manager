@@ -11,10 +11,6 @@ namespace HotelReservationsManager.Models.ViewModels.Reservation
         public int RoomId { get; set; }
 
         [Required]
-        [Display(Name = "Booked By")]
-        public string UserId { get; set; } = null!;
-
-        [Required]
         [Display(Name = "Check-in Date")]
         [DataType(DataType.Date)]
         public DateTime CheckInDate { get; set; } = DateTime.Today;

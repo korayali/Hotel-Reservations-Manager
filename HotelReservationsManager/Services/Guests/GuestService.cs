@@ -1,6 +1,6 @@
 ﻿using HotelReservationsManager.Data;
 using HotelReservationsManager.Extensions.Mapping;
-using HotelReservationsManager.Models.Domains;
+using HotelReservationsManager.Models;
 using HotelReservationsManager.Models.ViewModels.Guest;
 using HotelReservationsManager.Models.ViewModels.ReservationGuest;
 using HotelReservationsManager.Models.ViewModels.Shared;
@@ -22,7 +22,6 @@ namespace HotelReservationsManager.Services.Guests
         {
             var query = _context.Guests.AsNoTracking();
 
-            // Apply filters
             if (!string.IsNullOrWhiteSpace(filters.FirstName))
                 query = query.Where(g => g.FirstName.Contains(filters.FirstName));
 
@@ -70,18 +69,15 @@ namespace HotelReservationsManager.Services.Guests
                 .Include(g => g.ReservationGuests)
                 .FirstOrDefaultAsync(g => g.Id == id);
 
-            if (guest is null)
-                return null;
+            if (guest is null) return null;
 
             var vm = guest.ToDetailsViewModel();
 
             var reservationsQuery = _context.ReservationGuests
                 .AsNoTracking()
                 .Where(rg => rg.GuestId == id)
-                .Include(rg => rg.Reservation)
-                .ThenInclude(r => r.Room)             // Required for RoomNumber and RoomType
-                .Include(rg => rg.Reservation)
-                .ThenInclude(r => r.User)             // Required for BookedByUserName
+                .Include(rg => rg.Reservation).ThenInclude(r => r.Room)
+                .Include(rg => rg.Reservation).ThenInclude(r => r.User)
                 .Include(rg => rg.Reservation);
 
             int totalReservations = await reservationsQuery.CountAsync();
@@ -120,21 +116,61 @@ namespace HotelReservationsManager.Services.Guests
             return guest?.ToDeleteViewModel();
         }
 
-        public async Task CreateAsync(CreateGuestViewModel model)
+        /// <summary>
+        /// Creates a new guest. Returns a failure result if the email or phone
+        /// number is already registered to another guest.
+        /// </summary>
+        public async Task<ServiceResult> CreateAsync(CreateGuestViewModel model)
         {
+            var emailTaken = await _context.Guests
+                .AnyAsync(g => g.Email == model.Email);
+
+            if (emailTaken)
+                return ServiceResult.Fail($"A guest with email '{model.Email}' already exists.");
+
+            var phoneTaken = await _context.Guests
+                .AnyAsync(g => g.PhoneNumber == model.PhoneNumber);
+
+            if (phoneTaken)
+                return ServiceResult.Fail($"A guest with phone number '{model.PhoneNumber}' already exists.");
+
             var guest = model.ToDomain();
             _context.Guests.Add(guest);
             await _context.SaveChangesAsync();
+            return ServiceResult.Ok();
         }
 
-        public async Task<bool> UpdateAsync(EditGuestViewModel model)
+        /// <summary>
+        /// Updates a guest. Returns a failure result if the new email or phone
+        /// number conflicts with a different existing guest.
+        /// </summary>
+        public async Task<ServiceResult> UpdateAsync(EditGuestViewModel model)
         {
             var guest = await _context.Guests.FindAsync(model.Id);
-            if (guest is null) return false;
+            if (guest is null) return ServiceResult.Fail("Guest not found.");
+
+            // Only check uniqueness for fields that actually changed
+            if (!string.Equals(guest.Email, model.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailTaken = await _context.Guests
+                    .AnyAsync(g => g.Email == model.Email && g.Id != model.Id);
+
+                if (emailTaken)
+                    return ServiceResult.Fail($"A guest with email '{model.Email}' already exists.");
+            }
+
+            if (guest.PhoneNumber != model.PhoneNumber)
+            {
+                var phoneTaken = await _context.Guests
+                    .AnyAsync(g => g.PhoneNumber == model.PhoneNumber && g.Id != model.Id);
+
+                if (phoneTaken)
+                    return ServiceResult.Fail($"A guest with phone number '{model.PhoneNumber}' already exists.");
+            }
 
             guest.ApplyFromViewModel(model);
             await _context.SaveChangesAsync();
-            return true;
+            return ServiceResult.Ok();
         }
 
         public async Task<bool> DeleteAsync(int id)

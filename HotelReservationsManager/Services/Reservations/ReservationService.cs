@@ -56,7 +56,6 @@ namespace HotelReservationsManager.Services
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Status filter applied in memory since it is date-computed
             var cards = reservations.Select(r => r.ToCardViewModel()).ToList();
 
             if (filters.StatusFilter != ReservationStatusFilter.All)
@@ -108,9 +107,7 @@ namespace HotelReservationsManager.Services
 
         public async Task<CreateReservationViewModel> BuildCreateFormAsync()
         {
-            var vm = new CreateReservationViewModel();
-            await PopulateDropdownsAsync(vm);
-            return vm;
+            return new CreateReservationViewModel();
         }
 
         public async Task<EditReservationViewModel?> BuildEditFormAsync(int id)
@@ -121,14 +118,10 @@ namespace HotelReservationsManager.Services
             return vm;
         }
 
-        public async Task CreateAsync(
-            CreateReservationViewModel model,
-            string userId)
+        public async Task CreateAsync(CreateReservationViewModel model, string userId)
         {
             var reservation = model.ToDomain();
-
             reservation.UserId = userId;
-
             reservation.TotalPrice = await CalculatePriceAsync(
                 model.RoomId,
                 model.GuestIds,
@@ -141,9 +134,10 @@ namespace HotelReservationsManager.Services
             await _context.SaveChangesAsync();
 
             await SyncGuestsAsync(reservation.Id, model.GuestIds);
+            await RefreshRoomAvailabilityAsync(model.RoomId);
         }
 
-        public async Task<bool> UpdateAsync(EditReservationViewModel model)
+        public async Task<bool> UpdateAsync(EditReservationViewModel model, string userId)
         {
             var reservation = await _context.Reservations
                 .Include(r => r.ReservationGuests)
@@ -151,13 +145,21 @@ namespace HotelReservationsManager.Services
 
             if (reservation is null) return false;
 
+            var previousRoomId = reservation.RoomId;
+
             reservation.ApplyFromViewModel(model);
             reservation.TotalPrice = await CalculatePriceAsync(
                 model.RoomId, model.GuestIds, model.CheckInDate, model.CheckOutDate,
                 model.HasBreakfast, model.IsAllInclusive);
+            reservation.UserId = userId;
 
             await _context.SaveChangesAsync();
             await SyncGuestsAsync(reservation.Id, model.GuestIds);
+
+            await RefreshRoomAvailabilityAsync(model.RoomId);
+            if (model.RoomId != previousRoomId)
+                await RefreshRoomAvailabilityAsync(previousRoomId);
+
             return true;
         }
 
@@ -166,12 +168,56 @@ namespace HotelReservationsManager.Services
             var reservation = await _context.Reservations.FindAsync(id);
             if (reservation is null) return false;
 
+            var roomId = reservation.RoomId;
+
             _context.Reservations.Remove(reservation);
             await _context.SaveChangesAsync();
+
+            await RefreshRoomAvailabilityAsync(roomId);
             return true;
         }
 
+        /// <summary>
+        /// Soft capacity check. Returns a human-readable warning string when
+        /// guestCount exceeds the room's capacity, or null when within limits.
+        /// The caller decides whether to block or just surface the warning.
+        /// </summary>
+        public async Task<string?> CheckCapacityAsync(int roomId, int guestCount)
+        {
+            var room = await _context.Rooms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+
+            if (room is null) return null;
+            if (guestCount <= room.Capacity) return null;
+
+            return $"Warning: Room {room.RoomNumber} has a capacity of {room.Capacity} " +
+                   $"but {guestCount} guest(s) were selected. " +
+                   $"The reservation was saved, but please verify this is intentional.";
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Recomputes IsFree for a single room: the room is free when no reservation
+        /// covers today (CheckInDate &lt;= today &lt; CheckOutDate).
+        /// </summary>
+        private async Task RefreshRoomAvailabilityAsync(int roomId)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room is null) return;
+
+            var today = DateTime.Today;
+
+            var isOccupied = await _context.Reservations
+                .AnyAsync(r =>
+                    r.RoomId == roomId &&
+                    r.CheckInDate <= today &&
+                    r.CheckOutDate > today);
+
+            room.IsFree = !isOccupied;
+            await _context.SaveChangesAsync();
+        }
 
         private async Task SyncGuestsAsync(int reservationId, List<int> guestIds)
         {
@@ -233,9 +279,7 @@ namespace HotelReservationsManager.Services
                 .ToListAsync();
         }
 
-        public async Task<List<Room>> GetAvailableRoomsAsync(
-            DateTime checkIn,
-            DateTime checkOut)
+        public async Task<List<Room>> GetAvailableRoomsAsync(DateTime checkIn, DateTime checkOut)
         {
             return await _context.Rooms
                 .Where(room =>
@@ -248,9 +292,7 @@ namespace HotelReservationsManager.Services
                 .ToListAsync();
         }
 
-        public async Task<List<Guest>> GetAvailableGuestsAsync(
-            DateTime checkIn,
-            DateTime checkOut)
+        public async Task<List<Guest>> GetAvailableGuestsAsync(DateTime checkIn, DateTime checkOut)
         {
             return await _context.Guests
                 .Where(g =>

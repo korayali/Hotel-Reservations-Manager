@@ -9,11 +9,15 @@ namespace HotelReservationsManager.Services.Interfaces
         Task<DetailsReservationViewModel?> GetDetailsByIdAsync(int id);
         Task<EditReservationViewModel?> GetForEditAsync(int id);
         Task<DeleteReservationViewModel?> GetForDeleteAsync(int id);
+
         Task<CreateReservationViewModel> BuildCreateFormAsync();
         Task<EditReservationViewModel?> BuildEditFormAsync(int id);
+
         Task CreateAsync(CreateReservationViewModel model, string userId);
-        Task<bool> UpdateAsync(EditReservationViewModel model);
+        Task<bool> UpdateAsync(EditReservationViewModel model, string userId);
         Task<bool> DeleteAsync(int id);
+        Task<string?> CheckCapacityAsync(int roomId, int guestCount);
+
         Task<List<Room>> GetAvailableRoomsAsync(DateTime checkIn, DateTime checkOut);
         Task<List<Guest>> GetAvailableGuestsAsync(DateTime checkIn, DateTime checkOut);
     }

@@ -70,5 +70,10 @@ namespace HotelReservationsManager.Extensions
         {
             services.AddScoped<IReservationService, ReservationService>();
         }
+
+        public static void AddRoomAvailabilityUpdateService(this IServiceCollection services)
+        {
+            services.AddHostedService<RoomAvailabilityUpdater>();
+        }
     }
 }
