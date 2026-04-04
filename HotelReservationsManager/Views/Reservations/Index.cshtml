@@ -1,0 +1,137 @@
+@model HotelReservationsManager.Models.ViewModels.Reservation.ReservationListViewModel
+@using HotelReservationsManager.Models.ViewModels.Reservation
+
+@{
+    ViewData["Title"] = "Reservations";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">Reservations</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>New Reservation
+    </a>
+</div>
+
+@* Filter Panel *@
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-funnel me-1"></i>Filters</span>
+        @if (Model.Filters.HasActiveFilters())
+        {
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Clear Filters
+            </a>
+        }
+    </div>
+    <div class="card-body">
+        <form asp-action="Index" method="get">
+            <div class="row g-3">
+                <div class="col-sm-6 col-md-3">
+                    <label asp-for="Filters.RoomNumber" class="form-label"></label>
+                    <input asp-for="Filters.RoomNumber" class="form-control" placeholder="e.g. 101" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label asp-for="Filters.BookedByUserName" class="form-label"></label>
+                    <input asp-for="Filters.BookedByUserName" class="form-control" placeholder="Search name…" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label asp-for="Filters.CheckInFrom" class="form-label"></label>
+                    <input asp-for="Filters.CheckInFrom" class="form-control" type="date" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label asp-for="Filters.CheckInTo" class="form-label"></label>
+                    <input asp-for="Filters.CheckInTo" class="form-control" type="date" />
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <label asp-for="Filters.StatusFilter" class="form-label"></label>
+                    <select asp-for="Filters.StatusFilter" class="form-select"
+                            asp-items="Html.GetEnumSelectList<ReservationStatusFilter>()"></select>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <label asp-for="Filters.BreakfastFilter" class="form-label"></label>
+                    <select asp-for="Filters.BreakfastFilter" class="form-select"
+                            asp-items="Html.GetEnumSelectList<ReservationBoolFilter>()"></select>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <label asp-for="Filters.AllInclusiveFilter" class="form-label"></label>
+                    <select asp-for="Filters.AllInclusiveFilter" class="form-select"
+                            asp-items="Html.GetEnumSelectList<ReservationBoolFilter>()"></select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @success
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Items.Any())
+{
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-calendar-x fs-1"></i>
+        <p class="mt-2">No reservations found.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Room</th>
+                    <th>Booked By</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th>Nights</th>
+                    <th>Guests</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Items)
+                {
+                    <tr>
+                        <td class="fw-semibold">@r.RoomNumber <small class="text-muted fw-normal">@r.RoomTypeDisplay</small></td>
+                        <td>@r.BookedByUserName</td>
+                        <td>@r.CheckInDate.ToString("dd MMM yyyy")</td>
+                        <td>@r.CheckOutDate.ToString("dd MMM yyyy")</td>
+                        <td>@r.Nights</td>
+                        <td>@r.GuestCount</td>
+                        <td>@r.TotalPrice.ToString("C")</td>
+                        <td><span class="@r.StatusBadgeClass">@r.Status</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@r.Id"
+                                   class="btn btn-outline-secondary" title="Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@r.Id"
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@r.Id"
+                                   class="btn btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_Pagination" model="@Model" />
+}

@@ -1,0 +1,159 @@
+@model HotelReservationsManager.Models.ViewModels.Reservation.CreateReservationViewModel
+
+@{
+    ViewData["Title"] = "New Reservation";
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var tomorrow = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+
+    // Set default dates if model values are empty
+    if (Model.CheckInDate == default) Model.CheckInDate = DateTime.Today;
+    if (Model.CheckOutDate == default) Model.CheckOutDate = DateTime.Today.AddDays(1);
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">New Reservation</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to List
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- FORM -->
+    <div class="col-lg-8">
+        <div class="card card-gold h-100">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-3">
+
+                        <!-- DATES -->
+                        <div class="col-md-6">
+                            <label asp-for="CheckInDate" class="form-label"></label>
+                            <input asp-for="CheckInDate" id="CheckInDate" class="form-control" type="date" min="@today" value="@Model.CheckInDate.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="CheckInDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CheckOutDate" class="form-label"></label>
+                            <input asp-for="CheckOutDate" id="CheckOutDate" class="form-control" type="date" min="@tomorrow" value="@Model.CheckOutDate.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="CheckOutDate" class="text-danger small"></span>
+                        </div>
+
+                        <!-- ROOM -->
+                        <div class="col-md-6">
+                            <label asp-for="RoomId" class="form-label"></label>
+                            <select asp-for="RoomId" id="RoomId" class="form-select"></select>
+                            <span asp-validation-for="RoomId" class="text-danger small"></span>
+                        </div>
+
+                        <!-- GUESTS -->
+                        <div class="col-12">
+                            <label asp-for="GuestIds" class="form-label"></label>
+                            <select asp-for="GuestIds" id="GuestIds" class="form-select" multiple></select>
+                            <div class="form-text">Select multiple guests (Ctrl / Cmd)</div>
+                            <span asp-validation-for="GuestIds" class="text-danger small"></span>
+                        </div>
+
+                        <!-- OPTIONS -->
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="HasBreakfast" id="HasBreakfast" class="form-check-input" role="switch" />
+                                <label asp-for="HasBreakfast" class="form-check-label">Breakfast included</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsAllInclusive" id="IsAllInclusive" class="form-check-input" role="switch" />
+                                <label asp-for="IsAllInclusive" class="form-check-label">All Inclusive</label>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Confirm Reservation
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header"><i class="bi bi-receipt me-1"></i>Reservation Summary</div>
+            <div class="card-body">
+                <p><strong>Nights:</strong> <span id="nightsCount">0</span></p>
+                <p><strong>Guests:</strong> <span id="guestCount">0</span></p>
+                <p><strong>Breakfast:</strong> <span id="breakfastStatus">No</span></p>
+                <p><strong>All Inclusive:</strong> <span id="allInclusiveStatus">No</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <!-- Select2 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        function loadAvailableData() {
+        const checkIn = $("#CheckInDate").val();
+        const checkOut = $("#CheckOutDate").val();
+        if (!checkIn || !checkOut) return;
+
+        // Rooms
+        $.get('/Reservations/GetAvailableRooms', { checkIn, checkOut }, function(data) {
+        const roomSelect = $("#RoomId");
+        roomSelect.empty();
+        data.forEach(r => roomSelect.append(new Option(r.text, r.id)));
+        roomSelect.trigger('change');
+        });
+
+        // Guests
+        $.get('/Reservations/GetAvailableGuests', { checkIn, checkOut }, function(data) {
+        const guestSelect = $("#GuestIds");
+        guestSelect.empty();
+        data.forEach(g => guestSelect.append(new Option(g.text, g.id)));
+        guestSelect.trigger('change');
+        });
+        }
+
+        function updateSummary() {
+        const checkIn = new Date($("#CheckInDate").val());
+        const checkOut = new Date($("#CheckOutDate").val());
+        let nights = (!isNaN(checkIn) && !isNaN(checkOut)) ? Math.max(0, (checkOut - checkIn) / (1000 * 60 * 60 * 24)) : 0;
+        $("#nightsCount").text(nights);
+
+        const guestCount = $("#GuestIds").val()?.length || 0;
+        $("#guestCount").text(guestCount);
+
+        $("#breakfastStatus").text($("#HasBreakfast").is(":checked") ? "Yes" : "No");
+        $("#allInclusiveStatus").text($("#IsAllInclusive").is(":checked") ? "Yes" : "No");
+        }
+
+        $(document).ready(function() {
+        $("#RoomId").select2({ placeholder: "Select available room" });
+        $("#GuestIds").select2({ placeholder: "Select available guests" });
+
+        // Load availability immediately for default dates
+        loadAvailableData();
+        updateSummary();
+
+        // Reload availability when dates change
+        $("#CheckInDate, #CheckOutDate").on("change", function() {
+        loadAvailableData();
+        updateSummary();
+        });
+
+        // Update summary on options or guest selection change
+        $("#HasBreakfast, #IsAllInclusive, #GuestIds").on("change", updateSummary);
+        });
+    </script>
+}

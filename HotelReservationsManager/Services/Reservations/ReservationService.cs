@@ -1,13 +1,14 @@
 ﻿using HotelReservationsManager.Data;
-using HotelReservationsManager.Enums;
+using HotelReservationsManager.Extensions.Mapping;
 using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.Reservation;
-using HotelReservationsManager.Models.ViewModels.ReservationGuest;
+using HotelReservationsManager.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
-namespace HotelReservationsManager.Services.Reservations
+namespace HotelReservationsManager.Services
 {
-    public class ReservationService
+    public class ReservationService : IReservationService
     {
         private readonly HotelReservationsManagerDbContext _context;
 
@@ -16,43 +17,38 @@ namespace HotelReservationsManager.Services.Reservations
             _context = context;
         }
 
-        public async Task<ReservationListViewModel> GetReservationsAsync(ReservationFilterViewModel filters, int page, int pageSize)
+        public async Task<ReservationListViewModel> GetAllAsync(ReservationFilterViewModel filters, int page, int pageSize)
         {
             var query = _context.Reservations
+                .AsNoTracking()
                 .Include(r => r.Room)
                 .Include(r => r.User)
                 .Include(r => r.ReservationGuests)
-                    .ThenInclude(rg => rg.Guest)
                 .AsQueryable();
 
-            // Room number
             if (!string.IsNullOrWhiteSpace(filters.RoomNumber))
                 query = query.Where(r => r.Room.RoomNumber.ToString().Contains(filters.RoomNumber));
 
-            // Booked by user name
             if (!string.IsNullOrWhiteSpace(filters.BookedByUserName))
-                query = query.Where(r => r.User.UserName!.Contains(filters.BookedByUserName));
+                query = query.Where(r => r.User.DisplayName.Contains(filters.BookedByUserName));
 
-            // Check-in date range
             if (filters.CheckInFrom.HasValue)
                 query = query.Where(r => r.CheckInDate >= filters.CheckInFrom.Value);
 
             if (filters.CheckInTo.HasValue)
                 query = query.Where(r => r.CheckInDate <= filters.CheckInTo.Value);
 
-            // Breakfast filter
             if (filters.BreakfastFilter == ReservationBoolFilter.Yes)
                 query = query.Where(r => r.HasBreakfast);
             else if (filters.BreakfastFilter == ReservationBoolFilter.No)
                 query = query.Where(r => !r.HasBreakfast);
 
-            // All inclusive filter
             if (filters.AllInclusiveFilter == ReservationBoolFilter.Yes)
                 query = query.Where(r => r.IsAllInclusive);
             else if (filters.AllInclusiveFilter == ReservationBoolFilter.No)
                 query = query.Where(r => !r.IsAllInclusive);
 
-            var totalCount = await query.CountAsync();
+            int totalItems = await query.CountAsync();
 
             var reservations = await query
                 .OrderByDescending(r => r.CheckInDate)
@@ -60,169 +56,212 @@ namespace HotelReservationsManager.Services.Reservations
                 .Take(pageSize)
                 .ToListAsync();
 
-            var cards = reservations.Select(r => new ReservationCardViewModel
-            {
-                Id = r.Id,
-                RoomNumber = r.Room.RoomNumber.ToString(),
-                RoomTypeDisplay = r.Room.Type.ToString(),
-                BookedByUserName = r.User.UserName!,
-                CheckInDate = r.CheckInDate,
-                CheckOutDate = r.CheckOutDate,
-                GuestCount = r.ReservationGuests.Count,
-                HasBreakfast = r.HasBreakfast,
-                IsAllInclusive = r.IsAllInclusive,
-                TotalPrice = r.TotalPrice
-            });
+            // Status filter applied in memory since it is date-computed
+            var cards = reservations.Select(r => r.ToCardViewModel()).ToList();
 
-            return new ReservationListViewModel(cards, page, pageSize, totalCount)
+            if (filters.StatusFilter != ReservationStatusFilter.All)
+            {
+                var statusName = filters.StatusFilter.ToString();
+                cards = cards.Where(c => c.Status.ToString() == statusName).ToList();
+            }
+
+            return new ReservationListViewModel(cards, page, pageSize, totalItems)
             {
                 Filters = filters
             };
         }
 
-        public async Task<DetailsReservationViewModel?> GetReservationDetailsAsync(int id)
+        public async Task<DetailsReservationViewModel?> GetDetailsByIdAsync(int id)
         {
             var reservation = await _context.Reservations
+                .AsNoTracking()
                 .Include(r => r.Room)
                 .Include(r => r.User)
                 .Include(r => r.ReservationGuests)
                     .ThenInclude(rg => rg.Guest)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (reservation == null)
-                return null;
-
-            return new DetailsReservationViewModel
-            {
-                Id = reservation.Id,
-                RoomNumber = reservation.Room.RoomNumber.ToString(),
-                RoomTypeDisplay = reservation.Room.Type.ToString(),
-                RoomCapacity = reservation.Room.Capacity,
-                BookedByUserName = reservation.User.UserName!,
-                BookedByUserId = reservation.UserId,
-                CheckInDate = reservation.CheckInDate,
-                CheckOutDate = reservation.CheckOutDate,
-                HasBreakfast = reservation.HasBreakfast,
-                IsAllInclusive = reservation.IsAllInclusive,
-                TotalPrice = reservation.TotalPrice,
-                Guests = reservation.ReservationGuests.Select(rg => new ReservationGuestCardViewModel
-                {
-                    Id = rg.GuestId,
-                    FirstName = rg.Guest.FirstName,
-                    LastName = rg.Guest.LastName,
-                    Email = rg.Guest.Email
-                })
-            };
+            return reservation?.ToDetailsViewModel();
         }
 
-        public async Task<int> CreateReservationAsync(CreateReservationViewModel vm)
+        public async Task<EditReservationViewModel?> GetForEditAsync(int id)
         {
-            var reservation = new Reservation
-            {
-                RoomId = vm.RoomId,
-                UserId = vm.UserId,
-                CheckInDate = vm.CheckInDate,
-                CheckOutDate = vm.CheckOutDate,
-                HasBreakfast = vm.HasBreakfast,
-                IsAllInclusive = vm.IsAllInclusive
-            };
+            var reservation = await _context.Reservations
+                .AsNoTracking()
+                .Include(r => r.ReservationGuests)
+                .FirstOrDefaultAsync(r => r.Id == id);
 
-            reservation.ReservationGuests = vm.GuestIds
-                .Distinct()
-                .Select(id => new ReservationGuest
-                {
-                    GuestId = id
-                })
-                .ToList();
+            return reservation?.ToEditViewModel();
+        }
 
-            reservation.TotalPrice = await CalculateTotalPriceAsync(reservation);
+        public async Task<DeleteReservationViewModel?> GetForDeleteAsync(int id)
+        {
+            var reservation = await _context.Reservations
+                .AsNoTracking()
+                .Include(r => r.Room)
+                .Include(r => r.User)
+                .Include(r => r.ReservationGuests)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            return reservation?.ToDeleteViewModel();
+        }
+
+        public async Task<CreateReservationViewModel> BuildCreateFormAsync()
+        {
+            var vm = new CreateReservationViewModel();
+            await PopulateDropdownsAsync(vm);
+            return vm;
+        }
+
+        public async Task<EditReservationViewModel?> BuildEditFormAsync(int id)
+        {
+            var vm = await GetForEditAsync(id);
+            if (vm is null) return null;
+            await PopulateDropdownsAsync(vm);
+            return vm;
+        }
+
+        public async Task CreateAsync(
+            CreateReservationViewModel model,
+            string userId)
+        {
+            var reservation = model.ToDomain();
+
+            reservation.UserId = userId;
+
+            reservation.TotalPrice = await CalculatePriceAsync(
+                model.RoomId,
+                model.GuestIds,
+                model.CheckInDate,
+                model.CheckOutDate,
+                model.HasBreakfast,
+                model.IsAllInclusive);
 
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            return reservation.Id;
+            await SyncGuestsAsync(reservation.Id, model.GuestIds);
         }
 
-        public async Task<EditReservationViewModel?> GetEditReservationAsync(int id)
+        public async Task<bool> UpdateAsync(EditReservationViewModel model)
         {
             var reservation = await _context.Reservations
                 .Include(r => r.ReservationGuests)
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .FirstOrDefaultAsync(r => r.Id == model.Id);
 
-            if (reservation == null)
-                return null;
+            if (reservation is null) return false;
 
-            return new EditReservationViewModel
-            {
-                Id = reservation.Id,
-                RoomId = reservation.RoomId,
-                UserId = reservation.UserId,
-                CheckInDate = reservation.CheckInDate,
-                CheckOutDate = reservation.CheckOutDate,
-                HasBreakfast = reservation.HasBreakfast,
-                IsAllInclusive = reservation.IsAllInclusive,
-                TotalPrice = reservation.TotalPrice,
-                GuestIds = reservation.ReservationGuests.Select(rg => rg.GuestId).ToList()
-            };
-        }
-
-        public async Task UpdateReservationAsync(EditReservationViewModel vm)
-        {
-            var reservation = await _context.Reservations
-               .Include(r => r.ReservationGuests)
-               .FirstOrDefaultAsync(r => r.Id == vm.Id)
-               ?? throw new InvalidOperationException($"Reservation '{vm.Id}' not found.");
-
-            reservation.RoomId = vm.RoomId;
-            reservation.UserId = vm.UserId;
-            reservation.CheckInDate = vm.CheckInDate;
-            reservation.CheckOutDate = vm.CheckOutDate;
-            reservation.HasBreakfast = vm.HasBreakfast;
-            reservation.IsAllInclusive = vm.IsAllInclusive;
-
-            reservation.ReservationGuests.Clear();
-            foreach (var guestId in vm.GuestIds.Distinct())
-            {
-                reservation.ReservationGuests.Add(new ReservationGuest
-                {
-                    ReservationId = reservation.Id,
-                    GuestId = guestId
-                });
-            }
-
-            reservation.TotalPrice = await CalculateTotalPriceAsync(reservation);
+            reservation.ApplyFromViewModel(model);
+            reservation.TotalPrice = await CalculatePriceAsync(
+                model.RoomId, model.GuestIds, model.CheckInDate, model.CheckOutDate,
+                model.HasBreakfast, model.IsAllInclusive);
 
             await _context.SaveChangesAsync();
+            await SyncGuestsAsync(reservation.Id, model.GuestIds);
+            return true;
         }
 
-        public async Task CancelReservationAsync(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
-            var reservation = await _context.Reservations.FindAsync(id)
-                ?? throw new InvalidOperationException($"Reservation '{id}' not found.");
+            var reservation = await _context.Reservations.FindAsync(id);
+            if (reservation is null) return false;
 
             _context.Reservations.Remove(reservation);
             await _context.SaveChangesAsync();
+            return true;
         }
 
-        private async Task<decimal> CalculateTotalPriceAsync(Reservation reservation)
+        // ── Helpers ───────────────────────────────────────────────────────────
+
+        private async Task SyncGuestsAsync(int reservationId, List<int> guestIds)
         {
-            var room = await _context.Rooms.FirstAsync(r => r.Id == reservation.RoomId);
+            var existing = await _context.ReservationGuests
+                .Where(rg => rg.ReservationId == reservationId)
+                .ToListAsync();
 
-            var nights = (reservation.CheckOutDate - reservation.CheckInDate).Days;
-            if (nights <= 0) return 0m;
+            _context.ReservationGuests.RemoveRange(existing);
 
-            var guestCount = reservation.ReservationGuests.Count;
+            _context.ReservationGuests.AddRange(guestIds.Select(gid => new ReservationGuest
+            {
+                ReservationId = reservationId,
+                GuestId = gid
+            }));
 
-            var basePrice = (decimal)room.PricePerAdult * guestCount * nights;
+            await _context.SaveChangesAsync();
+        }
 
-            if (reservation.HasBreakfast)
-                basePrice += basePrice * 0.1m;
+        private async Task<decimal> CalculatePriceAsync(
+            int roomId, List<int> guestIds,
+            DateTime checkIn, DateTime checkOut,
+            bool hasBreakfast, bool isAllInclusive)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room is null) return 0;
 
-            if (reservation.IsAllInclusive)
-                basePrice += basePrice * 0.3m;
+            int nights = Math.Max(1, (checkOut - checkIn).Days);
 
-            return basePrice;
+            var guests = await _context.Guests
+                .Where(g => guestIds.Contains(g.Id))
+                .ToListAsync();
+
+            int adults = guests.Count(g => g.isAdult);
+            int children = guests.Count(g => !g.isAdult);
+
+            decimal basePrice = (decimal)(adults * room.PricePerAdult + children * room.PricePerChild) * nights;
+
+            if (hasBreakfast) basePrice *= 1.05m;
+            if (isAllInclusive) basePrice *= 1.20m;
+
+            return Math.Round(basePrice, 2);
+        }
+
+        private async Task PopulateDropdownsAsync(dynamic vm)
+        {
+            vm.AvailableRooms = await _context.Rooms
+                .Where(r => r.IsFree)
+                .OrderBy(r => r.RoomNumber)
+                .Select(r => new SelectListItem(
+                    $"Room {r.RoomNumber} — {r.Type} (cap. {r.Capacity})",
+                    r.Id.ToString()))
+                .ToListAsync();
+
+            vm.AvailableGuests = await _context.Guests
+                .OrderBy(g => g.LastName).ThenBy(g => g.FirstName)
+                .Select(g => new SelectListItem(
+                    $"{g.FirstName} {g.LastName} ({g.Email})",
+                    g.Id.ToString()))
+                .ToListAsync();
+        }
+
+        public async Task<List<Room>> GetAvailableRoomsAsync(
+            DateTime checkIn,
+            DateTime checkOut)
+        {
+            return await _context.Rooms
+                .Where(room =>
+                    !_context.Reservations.Any(r =>
+                        r.RoomId == room.Id &&
+                        r.CheckInDate < checkOut &&
+                        r.CheckOutDate > checkIn
+                    ))
+                .OrderBy(r => r.RoomNumber)
+                .ToListAsync();
+        }
+
+        public async Task<List<Guest>> GetAvailableGuestsAsync(
+            DateTime checkIn,
+            DateTime checkOut)
+        {
+            return await _context.Guests
+                .Where(g =>
+                    !_context.ReservationGuests.Any(rg =>
+                        rg.GuestId == g.Id &&
+                        rg.Reservation.CheckInDate < checkOut &&
+                        rg.Reservation.CheckOutDate > checkIn
+                    ))
+                .OrderBy(g => g.LastName)
+                .ThenBy(g => g.FirstName)
+                .ToListAsync();
         }
     }
 }
-

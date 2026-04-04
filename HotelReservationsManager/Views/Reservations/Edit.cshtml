@@ -1,0 +1,86 @@
+@model HotelReservationsManager.Models.ViewModels.Reservation.EditReservationViewModel
+
+@{
+    ViewData["Title"] = $"Edit Reservation #{Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">Edit Reservation <span class="text-muted fw-normal">#@Model.Id</span></h1>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Details
+    </a>
+</div>
+
+<div class="card card-gold" style="max-width: 680px;">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <input asp-for="Id" type="hidden" />
+
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="RoomId" class="form-label"></label>
+                    <select asp-for="RoomId" class="form-select" asp-items="Model.AvailableRooms">
+                        <option value="">— Select Room —</option>
+                    </select>
+                    <span asp-validation-for="RoomId" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="UserId" class="form-label"></label>
+                    <select asp-for="UserId" class="form-select" asp-items="Model.AvailableUsers">
+                        <option value="">— Select User —</option>
+                    </select>
+                    <span asp-validation-for="UserId" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="CheckInDate" class="form-label"></label>
+                    <input asp-for="CheckInDate" class="form-control" type="date" />
+                    <span asp-validation-for="CheckInDate" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="CheckOutDate" class="form-label"></label>
+                    <input asp-for="CheckOutDate" class="form-control" type="date" />
+                    <span asp-validation-for="CheckOutDate" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="GuestIds" class="form-label"></label>
+                    <select asp-for="GuestIds" class="form-select" asp-items="Model.AvailableGuests"
+                            multiple size="5">
+                    </select>
+                    <div class="form-text">Hold Ctrl / Cmd to select multiple guests.</div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="form-check form-switch">
+                        <input asp-for="HasBreakfast" class="form-check-input" role="switch" />
+                        <label asp-for="HasBreakfast" class="form-check-label">Breakfast included</label>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsAllInclusive" class="form-check-input" role="switch" />
+                        <label asp-for="IsAllInclusive" class="form-check-label">All Inclusive</label>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="TotalPrice" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="TotalPrice" class="form-control" readonly />
+                    </div>
+                    <div class="form-text">Recalculated automatically on save.</div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -11,6 +11,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddEmailServices();
 builder.Services.AddUserService();
 builder.Services.AddGuestService();
+builder.Services.AddRoomService();
+builder.Services.AddReservationService();
 
 var app = builder.Build();
 

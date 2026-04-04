@@ -17,22 +17,9 @@ namespace HotelReservationsManager.Extensions.Mapping
                 IsAdult = guest.isAdult
             };
 
-        // Requires: rg.Reservation, rg.Reservation.Room, rg.Reservation.User,
-        //           rg.Reservation.ReservationGuests
+        // Delegates to ReservationMappingExtensions to avoid duplication
         public static GuestReservationCardViewModel ToCardViewModel(this ReservationGuest rg) =>
-            new GuestReservationCardViewModel
-            {
-                ReservationId = rg.ReservationId,
-                CheckInDate = rg.Reservation.CheckInDate,
-                CheckOutDate = rg.Reservation.CheckOutDate,
-                RoomNumber = rg.Reservation.Room.RoomNumber.ToString(),
-                RoomType = rg.Reservation.Room.Type,
-                BookedByUserName = rg.Reservation.User.DisplayName,
-                GuestCount = rg.Reservation.ReservationGuests.Count,
-                HasBreakfast = rg.Reservation.HasBreakfast,
-                IsAllInclusive = rg.Reservation.IsAllInclusive,
-                TotalPrice = rg.Reservation.TotalPrice,
-            };
+            rg.ToReservationCardViewModel();
 
         public static DetailsGuestViewModel ToDetailsViewModel(this Guest guest) =>
             new DetailsGuestViewModel

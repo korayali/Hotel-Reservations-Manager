@@ -1,11 +1,13 @@
 ﻿using HotelReservationsManager.Data;
+using HotelReservationsManager.Extensions.Mapping;
 using HotelReservationsManager.Models.ViewModels.Room;
+using HotelReservationsManager.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
-namespace HotelReservationsManager.Services.RoomService
+namespace HotelReservationsManager.Services
 {
-    public class RoomService: IRoomService
+    public class RoomService : IRoomService
     {
-        
         private readonly HotelReservationsManagerDbContext _context;
 
         public RoomService(HotelReservationsManagerDbContext context)
@@ -13,23 +15,19 @@ namespace HotelReservationsManager.Services.RoomService
             _context = context;
         }
 
-        public async Task<RoomListViewModel> GetRoomsAsync(RoomFilterViewModel filters, int page, int pageSize)
+        public async Task<RoomListViewModel> GetAllAsync(RoomFilterViewModel filters, int page, int pageSize)
         {
-            var query = _context.Rooms.AsQueryable();
+            var query = _context.Rooms.AsNoTracking();
 
             if (filters.Type.HasValue)
                 query = query.Where(r => r.Type == filters.Type.Value);
 
-            switch (filters.AvailabilityFilter)
+            query = filters.AvailabilityFilter switch
             {
-                case RoomAvailabilityFilter.AvailableOnly:
-                    query = query.Where(r => r.IsFree);
-                    break;
-
-                case RoomAvailabilityFilter.OccupiedOnly:
-                    query = query.Where(r => !r.IsFree);
-                    break;
-            }
+                RoomAvailabilityFilter.AvailableOnly => query.Where(r => r.IsFree),
+                RoomAvailabilityFilter.OccupiedOnly => query.Where(r => !r.IsFree),
+                _ => query
+            };
 
             if (filters.MinCapacity.HasValue)
                 query = query.Where(r => r.Capacity >= filters.MinCapacity.Value);
@@ -37,7 +35,7 @@ namespace HotelReservationsManager.Services.RoomService
             if (filters.MaxCapacity.HasValue)
                 query = query.Where(r => r.Capacity <= filters.MaxCapacity.Value);
 
-            int totalCount = await query.CountAsync();
+            int totalItems = await query.CountAsync();
 
             var rooms = await query
                 .OrderBy(r => r.RoomNumber)
@@ -45,58 +43,72 @@ namespace HotelReservationsManager.Services.RoomService
                 .Take(pageSize)
                 .ToListAsync();
 
-            var cards = rooms.Select(r => new RoomCardViewModel
-            {
-                Id = r.Id,
-                RoomNumber = r.RoomNumber,
-                Type = r.Type,
-                Capacity = r.Capacity,
-                IsFree = r.IsFree,
-                PricePerAdult = r.PricePerAdult,
-                PricePerChild = r.PricePerChild
-            }).ToList();
-
-            return new RoomListViewModel(cards, page, pageSize, totalCount)
+            return new RoomListViewModel(rooms.Select(r => r.ToCardViewModel()).ToList(), page, pageSize, totalItems)
             {
                 Filters = filters
             };
         }
 
-        public async Task<DetailsRoomViewModel?> GetRoomDetailsAsync(int id)
+        public async Task<DetailsRoomViewModel?> GetDetailsByIdAsync(int id)
         {
             var room = await _context.Rooms
-                .Include(r => r.Reservations)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (room == null)
-                return null;
-
-            return new DetailsRoomViewModel
-            {
-                Id = room.Id,
-                RoomNumber = room.RoomNumber,
-                Type = room.Type,
-                Capacity = room.Capacity,
-                IsFree = room.IsFree,
-                PricePerAdult = room.PricePerAdult,
-                PricePerChild = room.PricePerChild,
-                Reservations = room.Reservations.ToList()
-            };
+            return room?.ToDetailsViewModel();
         }
 
-        public async Task UpdateRoomAsync(DetailsRoomViewModel vm)
+        public async Task<EditRoomViewModel?> GetForEditAsync(int id)
         {
-            var room = await _context.Rooms.FindAsync(vm.Id)
-                ?? throw new InvalidOperationException($"Room '{vm.Id}' not found.");
+            var room = await _context.Rooms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id);
 
-            room.RoomNumber = vm.RoomNumber;
-            room.Type = vm.Type;
-            room.Capacity = vm.Capacity;
-            room.IsFree = vm.IsFree;
-            room.PricePerAdult = vm.PricePerAdult;
-            room.PricePerChild = vm.PricePerChild;
+            return room?.ToEditViewModel();
+        }
 
+        public async Task<DeleteRoomViewModel?> GetForDeleteAsync(int id)
+        {
+            var room = await _context.Rooms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (room is null) return null;
+
+            var activeReservationCount = await _context.Reservations
+                .CountAsync(res => res.RoomId == id &&
+                                   res.CheckOutDate >= DateTime.Today);
+
+            return room.ToDeleteViewModel(activeReservationCount);
+        }
+
+        public async Task CreateAsync(CreateRoomViewModel model)
+        {
+            _context.Rooms.Add(model.ToDomain());
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> UpdateAsync(EditRoomViewModel model)
+        {
+            var room = await _context.Rooms.FindAsync(model.Id);
+            if (room is null) return false;
+
+            room.ApplyFromViewModel(model);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var room = await _context.Rooms.FindAsync(id);
+            if (room is null) return false;
+
+            _context.Rooms.Remove(room);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ExistsAsync(int id) =>
+            await _context.Rooms.AnyAsync(r => r.Id == id);
     }
 }

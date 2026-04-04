@@ -2,6 +2,7 @@
 {
     using global::HotelReservationsManager.Models.ViewModels.Guest;
     using global::HotelReservationsManager.Services.Guests;
+    using global::HotelReservationsManager.Services.Interfaces;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 

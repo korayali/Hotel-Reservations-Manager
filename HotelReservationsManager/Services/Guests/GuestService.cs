@@ -4,7 +4,6 @@ using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.Guest;
 using HotelReservationsManager.Models.ViewModels.ReservationGuest;
 using HotelReservationsManager.Models.ViewModels.Shared;
-using HotelReservationsManager.Services.Guests;
 using HotelReservationsManager.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 

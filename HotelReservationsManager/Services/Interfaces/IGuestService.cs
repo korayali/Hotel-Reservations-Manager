@@ -1,6 +1,6 @@
 ﻿using HotelReservationsManager.Models.ViewModels.Guest;
 
-namespace HotelReservationsManager.Services.Guests
+namespace HotelReservationsManager.Services.Interfaces
 {
     public interface IGuestService
     {

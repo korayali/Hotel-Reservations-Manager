@@ -97,7 +97,44 @@
                             </tbody>
                         </table>
                     </div>
-                    <partial name="_Pagination" model="@Model.Reservations" />
+                    @if (Model.Reservations.TotalPages > 1)
+                    {
+                        <nav class="p-3">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+
+                                <li class="page-item @(Model.Reservations.CurrentPage == 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                           asp-action="Details"
+                                           asp-route-id="@Model.Id"
+                                           asp-route-page="@(Model.Reservations.CurrentPage - 1)">
+                                        Previous
+                                    </a>
+                                </li>
+
+                                @for (int i = 1; i <= Model.Reservations.TotalPages; i++)
+                                {
+                                    <li class="page-item @(i == Model.Reservations.CurrentPage ? "active" : "")">
+                                        <a class="page-link"
+                                               asp-action="Details"
+                                               asp-route-id="@Model.Id"
+                                               asp-route-page="@i">
+                                            @i
+                                        </a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.Reservations.CurrentPage == Model.Reservations.TotalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                           asp-action="Details"
+                                           asp-route-id="@Model.Id"
+                                           asp-route-page="@(Model.Reservations.CurrentPage + 1)">
+                                        Next
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </nav>
+                    }
                 }
             </div>
         </div>

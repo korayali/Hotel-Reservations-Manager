@@ -22,4 +22,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.EntityFrameworkCore" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Views\Reservations\" />
+    <Folder Include="Views\Rooms\" />
+  </ItemGroup>
+
 </Project>

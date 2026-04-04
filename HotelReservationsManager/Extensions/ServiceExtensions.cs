@@ -1,6 +1,7 @@
 ﻿using Forked.Services;
 using HotelReservationsManager.Data;
 using HotelReservationsManager.Models.Domains;
+using HotelReservationsManager.Services;
 using HotelReservationsManager.Services.Guests;
 using HotelReservationsManager.Services.Interfaces;
 using HotelReservationsManager.Services.Users;
@@ -59,6 +60,15 @@ namespace HotelReservationsManager.Extensions
         public static void AddGuestService(this IServiceCollection services)
         {
             services.AddScoped<IGuestService, GuestService>();
+        }
+
+        public static void AddRoomService(this IServiceCollection services)
+        {
+            services.AddScoped<IRoomService, RoomService>();
+        }
+        public static void AddReservationService(this IServiceCollection services)
+        {
+            services.AddScoped<IReservationService, ReservationService>();
         }
     }
 }
