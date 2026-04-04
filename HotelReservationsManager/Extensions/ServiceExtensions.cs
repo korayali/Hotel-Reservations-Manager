@@ -1,6 +1,7 @@
 ﻿using Forked.Services;
 using HotelReservationsManager.Data;
 using HotelReservationsManager.Models.Domains;
+using HotelReservationsManager.Services.Guests;
 using HotelReservationsManager.Services.Interfaces;
 using HotelReservationsManager.Services.Users;
 using Microsoft.AspNetCore.Identity;
@@ -53,6 +54,11 @@ namespace HotelReservationsManager.Extensions
         {
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<SignInManager<User>, HotelReservationsManagerSignInManager>();
+        }
+
+        public static void AddGuestService(this IServiceCollection services)
+        {
+            services.AddScoped<IGuestService, GuestService>();
         }
     }
 }

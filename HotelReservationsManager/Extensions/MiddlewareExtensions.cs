@@ -1,6 +1,6 @@
 ﻿using HotelReservationsManager.Middleware;
 
-namespace HotelReservationsManager.Extensions.Mapping
+namespace HotelReservationsManager.Extensions
 {
     public static class MiddlewareExtensions
     {

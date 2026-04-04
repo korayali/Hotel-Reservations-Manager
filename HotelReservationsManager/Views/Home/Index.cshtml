@@ -1,8 +1,103 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model HotelReservationsManager.Models.ViewModels.Home.HomeIndexViewModel
+
+@{
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+@* ── Hero ─────────────────────────────────────────────────────────────────── *@
+<div class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content text-center">
+        <p class="hero-eyebrow">Welcome to</p>
+        <h1 class="hero-title">Grand Horizon Hotel</h1>
+        <span class="section-rule mx-auto d-block"></span>
+        <p class="hero-subtitle">Reservations &amp; Guest Management</p>
+        @if (!User.Identity!.IsAuthenticated)
+        {
+            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary btn-lg mt-3">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Continue
+            </a>
+        }
+        else
+        {
+            <div class="d-flex gap-3 justify-content-center mt-3 flex-wrap">
+                <a asp-controller="Reservations" asp-action="Index" class="btn btn-primary btn-lg">
+                    <i class="bi bi-calendar-check me-1"></i> Reservations
+                </a>
+                <a asp-controller="Guests" asp-action="Index" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-people me-1"></i> Guests
+                </a>
+            </div>
+        }
+    </div>
 </div>
+
+@* ── Stats + actions (authenticated only) ─────────────────────────────────── *@
+@if (User.Identity!.IsAuthenticated && Model is not null)
+{
+    <section class="py-5 mt-4">
+        <div class="row g-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <i class="bi bi-door-open stat-icon"></i>
+                    <div>
+                        <div class="stat-value">@Model.RoomsAvailable</div>
+                        <div class="stat-label">Rooms Available</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <i class="bi bi-calendar2-check stat-icon"></i>
+                    <div>
+                        <div class="stat-value">@Model.ActiveReservations</div>
+                        <div class="stat-label">Active Reservations</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <i class="bi bi-people stat-icon"></i>
+                    <div>
+                        <div class="stat-value">@Model.RegisteredGuests</div>
+                        <div class="stat-label">Registered Guests</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card d-flex align-items-center gap-3">
+                    <i class="bi bi-arrow-up-right-circle stat-icon"></i>
+                    <div>
+                        <div class="stat-value">@Model.CheckInsToday</div>
+                        <div class="stat-label">Check-ins Today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pb-5">
+        <h2 class="h5 mb-1">Quick Actions</h2>
+        <span class="section-rule"></span>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <a asp-controller="Reservations" asp-action="Create" class="quick-action-card text-decoration-none">
+                    <i class="bi bi-plus-circle quick-action-icon"></i>
+                    <div class="quick-action-label">New Reservation</div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Guests" asp-action="Create" class="quick-action-card text-decoration-none">
+                    <i class="bi bi-person-plus quick-action-icon"></i>
+                    <div class="quick-action-label">Add Guest</div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Rooms" asp-action="Index" class="quick-action-card text-decoration-none">
+                    <i class="bi bi-building quick-action-icon"></i>
+                    <div class="quick-action-label">Manage Rooms</div>
+                </a>
+            </div>
+        </div>
+    </section>
+}

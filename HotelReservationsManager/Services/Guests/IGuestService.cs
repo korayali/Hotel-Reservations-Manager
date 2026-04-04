@@ -1,0 +1,16 @@
+﻿using HotelReservationsManager.Models.ViewModels.Guest;
+
+namespace HotelReservationsManager.Services.Guests
+{
+    public interface IGuestService
+    {
+        Task<GuestListViewModel> GetAllAsync(GuestFilterViewModel filters, int page, int pageSize);
+        Task<DetailsGuestViewModel?> GetDetailsByIdAsync(int id, int reservationsPage, int reservationsPageSize);
+        Task<EditGuestViewModel?> GetForEditAsync(int id);
+        Task<DeleteGuestViewModel?> GetForDeleteAsync(int id);
+        Task CreateAsync(CreateGuestViewModel model);
+        Task<bool> UpdateAsync(EditGuestViewModel model);
+        Task<bool> DeleteAsync(int id);
+        Task<bool> ExistsAsync(int id);
+    }
+}
