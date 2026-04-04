@@ -1,0 +1,58 @@
+@model HotelReservationsManager.Models.ViewModels.Guest.DeleteGuestViewModel
+
+@{
+    ViewData["Title"] = "Delete Guest";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">Delete Guest</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card border-danger" style="max-width: 520px;">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+    </div>
+    <div class="card-body">
+        <p class="mb-3">
+            Are you sure you want to permanently delete the following guest?
+        </p>
+
+        <dl class="row mb-3">
+            <dt class="col-sm-4">Full Name</dt>
+            <dd class="col-sm-8">@Model.FirstName @Model.LastName</dd>
+
+            <dt class="col-sm-4">Email</dt>
+            <dd class="col-sm-8">@Model.Email</dd>
+
+            <dt class="col-sm-4">Reservations</dt>
+            <dd class="col-sm-8">
+                @if (Model.ReservationCount > 0)
+                {
+                    <span class="text-danger fw-semibold">
+                        <i class="bi bi-exclamation-circle"></i>
+                        @Model.ReservationCount reservation(s) will also be removed.
+                    </span>
+                }
+                else
+                {
+                    <span class="text-muted">None</span>
+                }
+            </dd>
+        </dl>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>

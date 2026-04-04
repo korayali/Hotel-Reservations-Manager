@@ -1,0 +1,140 @@
+﻿@using HotelReservationsManager.Enums
+@using HotelReservationsManager.Models.ViewModels.User
+@model DetailsUserViewModel
+@{
+    ViewData["Title"] = $"Edit — {Model.FullName}";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <div>
+        <h2 class="mb-0">@Model.FullName</h2>
+        <small class="text-muted">ID: @Model.Id</small>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">← Back to Users</a>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["StatusMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["StatusMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">Personal Information</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="FirstName" class="form-label"></label>
+                        <input asp-for="FirstName" class="form-control" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="MiddleName" class="form-label"></label>
+                        <input asp-for="MiddleName" class="form-control" />
+                        <span asp-validation-for="MiddleName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="LastName" class="form-label"></label>
+                        <input asp-for="LastName" class="form-control" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DisplayName" class="form-label"></label>
+                        <input asp-for="DisplayName" class="form-control" />
+                        <span asp-validation-for="DisplayName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="EGN" class="form-label"></label>
+                        <input asp-for="EGN" class="form-control" />
+                        <span asp-validation-for="EGN" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">Contact & Account</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" type="email" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="PhoneNumber" class="form-label"></label>
+                        <input asp-for="PhoneNumber" class="form-control" type="tel" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label"></label>
+                        <select asp-for="Role" class="form-select"
+                                asp-items="Html.GetEnumSelectList<UserRole>()"></select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="HireDate" class="form-label"></label>
+                        <input asp-for="HireDate" class="form-control" type="date" />
+                        <span asp-validation-for="HireDate" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" id="isActiveSwitch" />
+                            <label class="form-check-label" for="isActiveSwitch">Active Employee</label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="terminationDateGroup">
+                        <label asp-for="TerminationDate" class="form-label"></label>
+                        <input asp-for="TerminationDate" class="form-control" type="date" />
+                        <span asp-validation-for="TerminationDate" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const toggle = document.getElementById('isActiveSwitch');
+        const terminationGroup = document.getElementById('terminationDateGroup');
+        const terminationInput = document.getElementById('TerminationDate');
+
+        function syncTermination() {
+            const isActive = toggle.checked;
+            terminationGroup.style.display = isActive ? 'none' : 'block';
+
+            if (!isActive && !terminationInput.value) {
+                terminationInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            if (isActive) {
+                terminationInput.value = '';
+            }
+        }
+
+        toggle.addEventListener('change', syncTermination);
+        syncTermination();
+    </script>
+}

@@ -1,0 +1,66 @@
+@model HotelReservationsManager.Models.ViewModels.Reservation.DeleteReservationViewModel
+
+@{
+    ViewData["Title"] = $"Delete Reservation #{Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">Delete Reservation <span class="text-muted fw-normal">#@Model.Id</span></h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to List
+    </a>
+</div>
+
+<div class="card border-danger" style="max-width: 520px;">
+    <div class="card-header bg-danger">
+        <i class="bi bi-exclamation-triangle me-1"></i>Confirm Deletion
+    </div>
+    <div class="card-body">
+        <p class="mb-3">Are you sure you want to permanently delete this reservation?</p>
+
+        <dl class="row mb-3">
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.RoomNumber)</dt>
+            <dd class="col-sm-7">@Model.RoomNumber</dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.BookedByUserName)</dt>
+            <dd class="col-sm-7">@Model.BookedByUserName</dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.CheckInDate)</dt>
+            <dd class="col-sm-7">@Model.CheckInDate.ToString("dd MMM yyyy")</dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.CheckOutDate)</dt>
+            <dd class="col-sm-7">@Model.CheckOutDate.ToString("dd MMM yyyy")</dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.TotalPrice)</dt>
+            <dd class="col-sm-7">@Model.TotalPrice.ToString("C")</dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.Status)</dt>
+            <dd class="col-sm-7"><span class="@Model.Status">@Model.Status</span></dd>
+
+            <dt class="col-sm-5">@Html.DisplayNameFor(m => m.GuestCount)</dt>
+            <dd class="col-sm-7">
+                @if (Model.GuestCount > 0)
+                {
+                    <span class="text-danger fw-semibold">
+                        <i class="bi bi-exclamation-circle me-1"></i>
+                        @Model.GuestCount guest record(s) will be unlinked.
+                    </span>
+                }
+                else
+                {
+                    <span class="text-muted">None</span>
+                }
+            </dd>
+        </dl>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i>Yes, Delete
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,132 @@
+@model HotelReservationsManager.Models.ViewModels.Guest.GuestListViewModel
+@using HotelReservationsManager.Models.ViewModels.Guest
+
+@{
+    ViewData["Title"] = "Guests";
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+    <h1 class="h3 mb-0">Guests</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Add Guest
+    </a>
+</div>
+
+@* Filter Panel *@
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-funnel"></i> Filters</span>
+        @if (Model.Filters.HasActiveFilters())
+        {
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Clear Filters
+            </a>
+        }
+    </div>
+    <div class="card-body">
+        <form asp-action="Index" method="get">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="Filters.FirstName" class="form-label"></label>
+                    <input asp-for="Filters.FirstName" class="form-control" placeholder="Search first name…" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Filters.LastName" class="form-label"></label>
+                    <input asp-for="Filters.LastName" class="form-control" placeholder="Search last name…" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Filters.Email" class="form-label"></label>
+                    <input asp-for="Filters.Email" class="form-control" placeholder="Search email…" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Filters.AgeFilter" class="form-label"></label>
+                    <select asp-for="Filters.AgeFilter" class="form-select"
+                            asp-items="Html.GetEnumSelectList<GuestAgeFilter>()"></select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Filters.ReservationFilter" class="form-label"></label>
+                    <select asp-for="Filters.ReservationFilter" class="form-select"
+                            asp-items="Html.GetEnumSelectList<GuestReservationFilter>()"></select>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* TempData alerts *@
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @success
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@* Results *@
+@if (!Model.Items.Any())
+{
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-people fs-1"></i>
+        <p class="mt-2">No guests found.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Type</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var guest in Model.Items)
+                {
+                    <tr>
+                        <td>@guest.FirstName @guest.LastName</td>
+                        <td>@guest.PhoneNumber</td>
+                        <td>@guest.Email</td>
+                        <td>
+                            @if (guest.IsAdult)
+                            {
+                                <span class="badge bg-primary">Adult</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Minor</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@guest.Id"
+                                   class="btn btn-outline-secondary" title="Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@guest.Id"
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@guest.Id"
+                                   class="btn btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* Pagination *@
+    <partial name="_Pagination" model="@Model" />
+}

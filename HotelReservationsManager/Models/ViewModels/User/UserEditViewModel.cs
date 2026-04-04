@@ -28,6 +28,12 @@ namespace HotelReservationsManager.Models.ViewModels.User
         public string LastName { get; set; } = null!;
 
         [Required]
+        [Display(Name = "EGN")]
+        [StringLength(10, MinimumLength = 10, ErrorMessage = "EGN must be exactly 10 digits.")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "EGN must contain only digits.")]
+        public string EGN { get; set; } = null!;
+
+        [Required]
         [EmailAddress]
         [Display(Name = "Email")]
         public string Email { get; set; } = null!;

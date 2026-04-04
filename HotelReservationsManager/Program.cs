@@ -8,6 +8,12 @@ builder.Services.AddIdentityServices();
 builder.Services.AddDbSeeder();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddEmailServices();
+builder.Services.AddUserService();
+builder.Services.AddGuestService();
+builder.Services.AddRoomService();
+builder.Services.AddReservationService();
+builder.Services.AddRoomAvailabilityUpdateService();
 
 var app = builder.Build();
 
@@ -24,6 +30,8 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseActiveUserCheck();
 
 app.MapStaticAssets();
 
