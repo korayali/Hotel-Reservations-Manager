@@ -123,11 +123,16 @@ namespace HotelReservationsManager.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var deleted = await _roomService.DeleteAsync(id);
-            if (!deleted) return NotFound();
-
-            TempData["Success"] = "Room deleted successfully.";
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                await _roomService.DeleteAsync(id);
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Delete), new { id });
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace HotelReservationsManager.Controllers
 {
     using global::HotelReservationsManager.Models.ViewModels.Guest;
+    using global::HotelReservationsManager.Services;
     using global::HotelReservationsManager.Services.Guests;
     using global::HotelReservationsManager.Services.Interfaces;
     using Microsoft.AspNetCore.Authorization;
@@ -112,11 +113,16 @@
             [ValidateAntiForgeryToken]
             public async Task<IActionResult> DeleteConfirmed(int id)
             {
-                var deleted = await _guestService.DeleteAsync(id);
-                if (!deleted) return NotFound();
-
-                TempData["Success"] = "Guest deleted successfully.";
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    await _guestService.DeleteAsync(id);
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    TempData["Error"] = ex.Message;
+                    return RedirectToAction(nameof(Delete), new { id });
+                }
             }
         }
     }

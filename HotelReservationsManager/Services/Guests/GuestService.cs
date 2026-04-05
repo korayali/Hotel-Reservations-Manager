@@ -1,6 +1,7 @@
 ﻿using HotelReservationsManager.Data;
 using HotelReservationsManager.Extensions.Mapping;
 using HotelReservationsManager.Models;
+using HotelReservationsManager.Models.Domains;
 using HotelReservationsManager.Models.ViewModels.Guest;
 using HotelReservationsManager.Models.ViewModels.ReservationGuest;
 using HotelReservationsManager.Models.ViewModels.Shared;
@@ -175,8 +176,13 @@ namespace HotelReservationsManager.Services.Guests
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var guest = await _context.Guests.FindAsync(id);
+            var guest = await _context.Guests
+                .Include(g => g.ReservationGuests)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
             if (guest is null) return false;
+            if (guest.ReservationGuests.Any())
+                throw new InvalidOperationException($"Guest cannot be deleted because it has {guest.ReservationGuests.Count()} associated reservation(s).");
 
             _context.Guests.Remove(guest);
             await _context.SaveChangesAsync();

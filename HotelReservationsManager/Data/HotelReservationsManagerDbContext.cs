@@ -115,7 +115,7 @@ namespace HotelReservationsManager.Data
                 entity.HasMany(r => r.ReservationGuests)
                       .WithOne(rg => rg.Reservation)
                       .HasForeignKey(rg => rg.ReservationId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
 
@@ -128,7 +128,7 @@ namespace HotelReservationsManager.Data
                 entity.HasOne(rg => rg.Reservation)
                       .WithMany(r => r.ReservationGuests)
                       .HasForeignKey(rg => rg.ReservationId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(rg => rg.Guest)
                       .WithMany(g => g.ReservationGuests)

@@ -139,8 +139,13 @@ namespace HotelReservationsManager.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var room = await _context.Rooms.FindAsync(id);
+            var room = await _context.Rooms
+                .Include(r => r.Reservations)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
             if (room is null) return false;
+            if (room.Reservations.Any())
+                throw new InvalidOperationException($"Room cannot be deleted because it has {room.Reservations.Count} associated reservation(s).");
 
             _context.Rooms.Remove(room);
             await _context.SaveChangesAsync();

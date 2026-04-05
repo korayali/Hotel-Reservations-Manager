@@ -165,7 +165,10 @@ namespace HotelReservationsManager.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var reservation = await _context.Reservations.FindAsync(id);
+            var reservation = await _context.Reservations
+                .Include(r => r.ReservationGuests)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
             if (reservation is null) return false;
 
             var roomId = reservation.RoomId;
